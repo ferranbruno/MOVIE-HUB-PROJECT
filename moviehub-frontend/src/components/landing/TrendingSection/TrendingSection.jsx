@@ -1,7 +1,7 @@
 const trendingItems = [
-  { title: 'Aurora Drift', tag: 'Fantasy' },
-  { title: 'Shadow District', tag: 'Mystery' },
-  { title: 'Echoes of Tomorrow', tag: 'Adventure' }
+  { title: 'Aurora Drift', tag: 'Fantasy', image: 'https://picsum.photos/400/300?random=4' },
+  { title: 'Shadow District', tag: 'Mystery', image: 'https://picsum.photos/400/300?random=5' },
+  { title: 'Echoes of Tomorrow', tag: 'Adventure', image: 'https://picsum.photos/400/300?random=6' }
 ];
 
 function TrendingSection() {
@@ -14,9 +14,12 @@ function TrendingSection() {
         </div>
         <div className="grid gap-4 md:grid-cols-3">
           {trendingItems.map((item) => (
-            <article key={item.title} className="rounded-2xl border border-white/10 bg-gradient-to-br from-white/10 to-cyan-400/10 p-5">
-              <h3 className="text-lg font-semibold text-white">{item.title}</h3>
-              <p className="mt-1 text-sm text-slate-300">{item.tag}</p>
+            <article key={item.title} className="overflow-hidden rounded-2xl border border-white/10 shadow-xl shadow-black/20">
+              <img src={item.image} alt={item.title} className="h-40 w-full object-cover" />
+              <div className="bg-gradient-to-br from-white/10 to-cyan-400/10 p-4">
+                <h3 className="text-lg font-semibold text-white">{item.title}</h3>
+                <p className="mt-1 text-sm text-slate-300">{item.tag}</p>
+              </div>
             </article>
           ))}
         </div>

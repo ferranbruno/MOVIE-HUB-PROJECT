@@ -1,7 +1,7 @@
 const movies = [
-  { title: 'Neon Skyline', genre: 'Sci-Fi', time: '7:30 PM' },
-  { title: 'Midnight Circuit', genre: 'Thriller', time: '8:45 PM' },
-  { title: 'Golden Hour', genre: 'Drama', time: '6:15 PM' }
+  { title: 'Neon Skyline', genre: 'Sci-Fi', time: '7:30 PM', image: 'https://picsum.photos/400/300?random=1' },
+  { title: 'Midnight Circuit', genre: 'Thriller', time: '8:45 PM', image: 'https://picsum.photos/400/300?random=2' },
+  { title: 'Golden Hour', genre: 'Drama', time: '6:15 PM', image: 'https://picsum.photos/400/300?random=3' }
 ];
 
 function NowShowingSection() {
@@ -15,7 +15,7 @@ function NowShowingSection() {
         <div className="grid gap-5 md:grid-cols-3">
           {movies.map((movie) => (
             <article key={movie.title} className="overflow-hidden rounded-2xl border border-white/10 bg-white/5 shadow-xl shadow-black/20">
-              <div className="h-44 bg-gradient-to-br from-pink-500/90 via-fuchsia-500/70 to-cyan-400/60" />
+              <img src={movie.image} alt={movie.title} className="h-44 w-full object-cover" />
               <div className="p-4">
                 <h3 className="text-lg font-semibold text-white">{movie.title}</h3>
                 <p className="mt-1 text-sm text-slate-300">{movie.genre}</p>

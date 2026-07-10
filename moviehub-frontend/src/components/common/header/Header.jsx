@@ -9,13 +9,17 @@ function Header() {
           <span>MovieHub</span>
         </a>
         <nav className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
-          <a href="#now-showing" className="transition hover:text-white">Now Showing</a>
-          <a href="#trending" className="transition hover:text-white">Trending</a>
-          <a href="#about" className="transition hover:text-white">About</a>
+          <a href="#browse" className="transition hover:text-white">Browse movies</a>
+          <a href="#now-showing" className="transition hover:text-white">Now showing</a>
         </nav>
-        <a href="#now-showing" className="rounded-full bg-gradient-to-r from-pink-500 to-orange-400 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-pink-500/20">
-          Book Tickets
-        </a>
+        <div className="flex items-center gap-3">
+          <a href="#login" className="text-sm font-semibold text-slate-300 transition hover:text-white">
+            Login
+          </a>
+          <a href="#signup" className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-pink-500/20">
+            Sign up
+          </a>
+        </div>
       </div>
     </header>
   );
