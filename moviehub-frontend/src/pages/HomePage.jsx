@@ -17,5 +17,5 @@ function HomePage() {
     </div>
   );
 }
-
+// output: HomePage component renders the main structure of the home page, including the header, hero section, now showing section, trending section, and footer.
 export default HomePage;
