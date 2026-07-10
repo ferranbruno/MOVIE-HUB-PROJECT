@@ -6,7 +6,8 @@
   "dependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.30.0"
+    "react-router-dom": "^6.30.0",
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",
@@ -18,6 +19,7 @@
   },
   "scripts": {
     "dev": "vite",
+    "mock-server": "node --require ./mock-server.cjs ./mock-server.cjs",
     "start": "vite",
     "build": "vite build",
     "preview": "vite preview"
