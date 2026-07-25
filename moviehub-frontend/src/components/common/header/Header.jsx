@@ -14,14 +14,6 @@ function Header() {
           <a href="#browse" className="transition hover:text-white">Browse movies</a>
           <a href="#now-showing" className="transition hover:text-white">Now showing</a>
         </nav>
-        <div className="flex items-center gap-3">
-          <Link to="/login" className="text-sm font-semibold text-slate-300 transition hover:text-white">
-            Login
-          </Link>
-          <Link to="/signup" className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-pink-500/20">
-            Sign up
-          </Link>
-        </div>
       </div>
     </header>
   );
