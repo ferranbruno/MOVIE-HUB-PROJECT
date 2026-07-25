@@ -1,21 +1,582 @@
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import {
+  Search,
+  LogIn,
+  UserPlus,
+  Building2,
+  Ticket,
+  ChevronLeft,
+  Star,
+  Plus,
+  X,
+  MapPin,
+  Loader2,
+  Flame,
+  User,
+} from 'lucide-react';
 import Header from '../components/common/header/Header';
-import HeroSection from '../components/landing/HeroSection/HeroSection';
-import NowShowingSection from '../components/landing/NowShowingSection/NowShowingSection';
-import TrendingSection from '../components/landing/TrendingSection/TrendingSection';
 import Footer from '../components/common/Footer/Footer';
+import useAuth from '../hooks/useAuth';
 
+/* ---------------------------------------------------------
+   Data source: TMDB "now playing"
+   Setup: create a free key at themoviedb.org → Settings → API,
+   then add VITE_TMDB_API_KEY=your_key to your .env
+   Fallback sample movies are shown when TMDB is unavailable.
+--------------------------------------------------------- */
+const TMDB_API_KEY = import.meta.env?.VITE_TMDB_API_KEY;
+const isPlaceholderApiKey = TMDB_API_KEY === 'YOUR_TMDB_API_KEY';
+const TMDB_BASE = 'https://api.themoviedb.org/3';
+const POSTER_BASE = 'https://image.tmdb.org/t/p/w342';
+
+/** In a real app, fetch this from GET /cinemas instead of hardcoding. */
+const availableCinemas = [
+  'Grand Palace Cinema',
+  'Silver Screen Multiplex',
+  'Starlight Theatres',
+  'Vista IMAX',
+];
+
+
+
+/* ---------------------------------------------------------
+   Sidebar — same collapsing pattern as before, restyled with
+   a cyan/blue accent to match the original homepage theme
+--------------------------------------------------------- */
+function HomeSidebar({ collapsed, setCollapsed }) {
+  const { isAuthenticated } = useAuth();
+
+  const navItems = isAuthenticated
+    ? [
+        { icon: User, label: 'Profile', to: '/profile' },
+        { icon: Building2, label: 'Cinemas', to: '/cinemas' },
+      ]
+    : [
+        { icon: LogIn, label: 'Sign in', to: '/login' },
+        { icon: UserPlus, label: 'Sign up', to: '/signup' },
+        { icon: Building2, label: 'Cinemas', to: '/cinemas' },
+      ];
+
+  return (
+    <aside
+      className={`group fixed left-0 top-16 bottom-0 hidden flex-col border-r border-white/10 bg-neutral-950 text-neutral-200 transition-all duration-300 lg:flex ${
+        collapsed ? 'w-16' : 'w-60'
+      }`}
+    >
+      <button
+        onClick={() => setCollapsed((c) => !c)}
+        className={`absolute -right-3 top-4 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-neutral-950 text-neutral-200 shadow-sm transition-opacity duration-150 ${
+          collapsed ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+        }`}
+        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+      >
+        <ChevronLeft
+          size={13}
+          className={`transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
+        />
+      </button>
+
+      <div className="flex items-center gap-2.5 px-3 py-3.5">
+        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600">
+          <Flame size={14} className="text-white" />
+        </div>
+        {!collapsed && (
+          <div className="flex flex-col overflow-hidden whitespace-nowrap">
+            <span className="text-[13px] font-semibold text-white">MovieHub</span>
+            <span className="text-[11px] text-neutral-500">Your cinema guide</span>
+          </div>
+        )}
+      </div>
+
+      <div
+        className={`mx-3 mb-2.5 flex items-center gap-2 rounded-md bg-neutral-900 px-2 py-1.5 text-neutral-500 ${
+          collapsed ? 'justify-center' : ''
+        }`}
+      >
+        <Search size={14} className="flex-shrink-0" />
+        {!collapsed && (
+          <>
+            <span className="flex-1 text-[12.5px]">Jump to</span>
+            <span className="rounded border border-neutral-800 bg-neutral-950 px-1 text-[10.5px] text-neutral-500">
+              ⌘K
+            </span>
+          </>
+        )}
+      </div>
+
+      <nav className="flex flex-col gap-0.5 px-2">
+        {navItems.map(({ label, icon: Icon, to }) => (
+          <Link
+            key={label}
+            to={to}
+            className={`group/item relative flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-neutral-400 transition hover:bg-neutral-900 hover:text-white ${
+              collapsed ? 'justify-center px-2' : ''
+            }`}
+          >
+            <Icon size={16} className="flex-shrink-0" />
+            {!collapsed && <span className="flex-1 truncate">{label}</span>}
+            {collapsed && (
+              <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[12px] text-white opacity-0 transition-opacity duration-100 group-hover/item:opacity-100">
+                {label}
+              </span>
+            )}
+          </Link>
+        ))}
+      </nav>
+    </aside>
+  );
+}
+
+/* ---------------------------------------------------------
+   Hero
+--------------------------------------------------------- */
+function Hero({ query, setQuery }) {
+  return (
+    <section className="overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-slate-950 via-slate-900 to-cyan-950/30 px-6 py-10 sm:px-10">
+      <div className="mb-3 inline-flex rounded-full border border-cyan-400/20 bg-cyan-400/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.35em] text-cyan-200">
+        Now booking
+      </div>
+      <h1 className="max-w-2xl text-4xl font-black tracking-tight text-white sm:text-5xl">
+        Discover unforgettable movies and book your seat in seconds.
+      </h1>
+      <p className="mt-4 max-w-xl text-base text-slate-300">
+        Browse the latest showtimes from TMDB, explore cinemas, and reserve your favorite seat with a smooth booking experience.
+      </p>
+      <div className="mt-8 grid gap-4 sm:grid-cols-[1.25fr_auto]">
+        <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-xl shadow-black/20">
+          <input
+            type="text"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search TMDB movies..."
+            className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
+          />
+        </div>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            to="/cinemas"
+            className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:opacity-90"
+          >
+            Browse cinemas
+          </Link>
+          <Link
+            to="/cinemas"
+            className="rounded-2xl border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/30"
+          >
+            View added cinemas
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------
+   Add Cinema modal
+--------------------------------------------------------- */
+function AddCinemaModal({ movie, onClose, onAdd }) {
+  const [cinema, setCinema] = useState(availableCinemas[0]);
+  const [showtime, setShowtime] = useState('');
+  const [price, setPrice] = useState('');
+
+  function handleSubmit(e) {
+    e.preventDefault();
+    if (!showtime || !price) return;
+    onAdd({ cinema, showtime, price: `$${parseFloat(price).toFixed(2)}` });
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+      <div className="w-full max-w-sm rounded-xl border border-white/10 bg-neutral-900 p-5">
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <h3 className="text-[14px] font-semibold text-white">Add cinema</h3>
+            <p className="text-[12px] text-neutral-500">{movie.title}</p>
+          </div>
+          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-300">
+            <X size={16} />
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-[11.5px] font-medium text-neutral-500">Cinema</span>
+            <select
+              value={cinema}
+              onChange={(e) => setCinema(e.target.value)}
+              className="rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-[13px] text-white focus:border-cyan-400 focus:outline-none"
+            >
+              {availableCinemas.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[11.5px] font-medium text-neutral-500">Showtime</span>
+            <input
+              type="time"
+              value={showtime}
+              onChange={(e) => setShowtime(e.target.value)}
+              className="rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-[13px] text-white focus:border-cyan-400 focus:outline-none"
+            />
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[11.5px] font-medium text-neutral-500">Ticket price ($)</span>
+            <input
+              type="number"
+              min="0"
+              step="0.5"
+              value={price}
+              onChange={(e) => setPrice(e.target.value)}
+              placeholder="8.00"
+              className="rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-[13px] text-white placeholder:text-neutral-600 focus:border-cyan-400 focus:outline-none"
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="mt-2 rounded-md bg-gradient-to-r from-cyan-400 to-blue-500 py-2.5 text-[13px] font-medium text-neutral-950 hover:opacity-90"
+          >
+            Add to movie
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   Movie card — poster with rating badge overlaid top-right,
+   cinema assignments as chips, Add cinema action
+--------------------------------------------------------- */
+function MovieCard({ movie, assignments, onOpenAddCinema }) {
+  const year = movie.release_date ? movie.release_date.slice(0, 4) : '—';
+
+  return (
+    <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-neutral-900">
+      <div className="relative aspect-[2/3] w-full bg-neutral-800">
+        {movie.poster_path ? (
+          <img
+            src={movie.poster_path.startsWith('http') ? movie.poster_path : `${POSTER_BASE}${movie.poster_path}`}
+            alt={movie.title}
+            className="h-full w-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center text-neutral-600">
+            No poster
+          </div>
+        )}
+        <span className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/70 px-2 py-0.5 text-[11px] font-medium text-cyan-300">
+          <Star size={10} className="fill-cyan-300 text-cyan-300" />
+          {movie.vote_average?.toFixed(1) ?? '—'}
+        </span>
+      </div>
+
+      <div className="flex flex-1 flex-col gap-2 p-3">
+        <div>
+          <p className="truncate text-[13px] font-semibold text-white">{movie.title}</p>
+          <p className="text-[11px] text-neutral-500">{year}</p>
+        </div>
+
+        {assignments.length > 0 && (
+          <div className="flex flex-col gap-1">
+            {assignments.map((a, i) => (
+              <div
+                key={i}
+                className="flex items-center gap-1.5 rounded-md bg-neutral-950/70 px-2 py-1 text-[11px] text-neutral-300"
+              >
+                <MapPin size={10} className="flex-shrink-0 text-cyan-400" />
+                <span className="truncate">
+                  {a.cinema} · {a.showtime} · {a.price}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+
+        <button
+          onClick={() => onOpenAddCinema(movie)}
+          className="mt-auto flex items-center justify-center gap-1 rounded-md border border-white/10 py-1.5 text-[11.5px] font-medium text-neutral-300 hover:border-amber-400/50 hover:text-amber-300"
+        >
+          <Plus size={13} /> Add cinema
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------
+   Now Showing — fetches real movies, holds cinema assignments
+--------------------------------------------------------- */
+function NowShowing({ movies, loading, error, query, assignments, onAssign }) {
+  const [activeMovie, setActiveMovie] = useState(null);
+
+  function handleAdd(entry) {
+    onAssign(activeMovie, entry);
+    setActiveMovie(null);
+  }
+
+  return (
+    <section>
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-[18px] font-semibold text-white">Now showing</h2>
+        <span className="text-[12px] text-neutral-500">via TMDB</span>
+      </div>
+
+      {loading && (
+        <div className="flex items-center gap-2 py-10 text-neutral-400">
+          <Loader2 size={16} className="animate-spin" />
+          <span className="text-[13px]">Loading movies…</span>
+        </div>
+      )}
+
+      {error && !loading && (
+        <div className="rounded-md border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-[13px] text-cyan-100">
+          {error}
+        </div>
+      )}
+
+      {!loading && !error && movies.length === 0 && (
+        <div className="rounded-md border border-slate-700 bg-slate-900 px-4 py-6 text-[13px] text-slate-400">
+          {query
+            ? `No movies found for "${query}". Try a different search.`
+            : 'No TMDB movies available right now.'}
+        </div>
+      )}
+
+      {!loading && !error && movies.length > 0 && (
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+          {movies.map((movie) => (
+            <MovieCard
+              key={movie.id}
+              movie={movie}
+              assignments={assignments[movie.id] ?? []}
+              onOpenAddCinema={setActiveMovie}
+            />
+          ))}
+        </div>
+      )}
+
+      {activeMovie && (
+        <AddCinemaModal
+          movie={activeMovie}
+          onClose={() => setActiveMovie(null)}
+          onAdd={handleAdd}
+        />
+      )}
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------
+   Trending — top 3 by rating from whichever loaded, own layout
+--------------------------------------------------------- */
+function Trending({ movies }) {
+  const top = [...movies].sort((a, b) => b.vote_average - a.vote_average).slice(0, 3);
+  if (top.length === 0) return null;
+
+  return (
+    <section>
+      <h2 className="mb-4 flex items-center gap-1.5 text-[18px] font-semibold text-white">
+        <Flame size={16} className="text-cyan-400" /> Trending this week
+      </h2>
+      <div className="flex flex-col divide-y divide-white/10 rounded-xl border border-white/10 bg-neutral-900">
+        {top.map((m, i) => (
+          <div key={m.id} className="flex items-center gap-3 px-4 py-3.5">
+            <span className="w-5 text-[13px] font-semibold text-cyan-400">{i + 1}</span>
+            {m.poster_path && (
+              <img
+                src={`${POSTER_BASE}${m.poster_path}`}
+                alt={m.title}
+                className="h-12 w-8 flex-shrink-0 rounded object-cover"
+              />
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-[13px] font-semibold text-white">{m.title}</p>
+              <p className="text-[11px] text-neutral-500">
+                {m.release_date ? m.release_date.slice(0, 4) : '—'}
+              </p>
+            </div>
+            <span className="flex items-center gap-1 text-[12px] font-medium text-cyan-300">
+              <Star size={11} className="fill-cyan-300 text-cyan-300" />
+              {m.vote_average?.toFixed(1)}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+/* ---------------------------------------------------------
+   HomePage
+--------------------------------------------------------- */
 function HomePage() {
+  const [collapsed, setCollapsed] = useState(false);
+  const [movies, setMovies] = useState([]);
+  const [searchResults, setSearchResults] = useState(null);
+  const [query, setQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [assignments, setAssignments] = useState(() => {
+    if (typeof window === 'undefined') return {};
+    try {
+      return JSON.parse(localStorage.getItem('moviehub-assignments') || '{}');
+    } catch {
+      return {};
+    }
+  });
+
+  const displayMovies = query.trim() ? searchResults ?? [] : movies;
+
+  useEffect(() => {
+    localStorage.setItem('moviehub-assignments', JSON.stringify(assignments));
+  }, [assignments]);
+
+  useEffect(() => {
+    async function fetchMovies() {
+      setLoading(true);
+
+      if (!TMDB_API_KEY || isPlaceholderApiKey) {
+        setError(
+          'Missing or invalid TMDB API key. Update moviehub-frontend/.env with a real VITE_TMDB_API_KEY.'
+        );
+        setMovies([]);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const res = await fetch(
+          `${TMDB_BASE}/movie/now_playing?api_key=${TMDB_API_KEY}&language=en-US&page=1`
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.status_message || `TMDB request failed (${res.status})`);
+        }
+
+        setMovies(data.results ?? []);
+        setError(null);
+      } catch (err) {
+        setError(`TMDB request failed. ${err.message}`);
+        setMovies([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    fetchMovies();
+  }, []);
+
+  useEffect(() => {
+    if (!query.trim()) {
+      setSearchResults(null);
+      return;
+    }
+
+    const controller = new AbortController();
+    const timer = setTimeout(async () => {
+      if (!TMDB_API_KEY || isPlaceholderApiKey) {
+        setError(
+          'Missing or invalid TMDB API key. Update moviehub-frontend/.env with a real VITE_TMDB_API_KEY.'
+        );
+        setSearchResults([]);
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+
+      try {
+        const res = await fetch(
+          `${TMDB_BASE}/search/movie?api_key=${TMDB_API_KEY}&language=en-US&query=${encodeURIComponent(
+            query
+          )}&page=1&include_adult=false`,
+          { signal: controller.signal }
+        );
+        const data = await res.json();
+
+        if (!res.ok) {
+          throw new Error(data.status_message || `Search failed (${res.status})`);
+        }
+
+        setSearchResults(data.results ?? []);
+        setError(null);
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          setError(`Movie search failed. ${err.message}`);
+          setSearchResults([]);
+        }
+      } finally {
+        setLoading(false);
+      }
+    }, 300);
+
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
+  }, [query]);
+
+  function handleAssign(movie, entry) {
+    setAssignments((prev) => ({
+      ...prev,
+      [movie.id]: [
+        ...(prev[movie.id] ?? []),
+        {
+          cinema: entry.cinema,
+          showtime: entry.showtime,
+          price: entry.price,
+          title: movie.title,
+          poster_path: movie.poster_path,
+          release_date: movie.release_date,
+          vote_average: movie.vote_average,
+        },
+      ],
+      /*
+       * Real backend version: also POST to your API here, e.g.
+       *   await fetch('/api/showtimes', {
+       *     method: 'POST',
+       *     headers: { 'Content-Type': 'application/json' },
+       *     body: JSON.stringify({ movie_id: movie.id, cinema: entry.cinema,
+       *       start_time: entry.showtime, price: entry.price }),
+       *   });
+       */
+    }));
+  }
+
   return (
     <div className="page-shell">
       <Header />
-      <HeroSection />
-      <main>
-        <NowShowingSection />
-        <TrendingSection />
+      <main className="relative min-h-screen bg-neutral-950 text-white">
+        <HomeSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
+        <div
+          className={`space-y-10 px-4 pb-16 pt-8 sm:px-6 lg:px-8 ${
+            collapsed ? 'lg:pl-16' : 'lg:pl-60'
+          }`}
+        >
+          <Hero query={query} setQuery={setQuery} />
+          <NowShowing
+            movies={displayMovies}
+            loading={loading}
+            error={error}
+            query={query}
+            assignments={assignments}
+            onAssign={handleAssign}
+          />
+          <Trending movies={displayMovies} />
+        </div>
       </main>
       <Footer />
     </div>
   );
 }
-// output: HomePage component renders the main structure of the home page, including the header, hero section, now showing section, trending section, and footer.
+
 export default HomePage;
