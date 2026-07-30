@@ -425,9 +425,27 @@ function NowShowing({ movies, loading, error, query }) {
 /* ---------------------------------------------------------
    Trending — top 3 by rating from whichever loaded, own layout
 --------------------------------------------------------- */
-function Trending({ movies }) {
-  const top = [...movies].sort((a, b) => b.vote_average - a.vote_average).slice(0, 3);
-  if (top.length === 0) return null;
+function Trending() {
+  const [cinemaMovies, setCinemaMovies] = useState([]);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        const res = await fetch('/api/movies');
+        if (!res.ok) return;
+        const data = await res.json();
+        const now = new Date();
+        const withShowtimes = (Array.isArray(data) ? data : [])
+          .filter((m) => (m.showtimes || []).some((st) => new Date(st.start_time) > new Date(now.getTime() - 3600000)))
+          .sort((a, b) => parseFloat(b.rating || 0) - parseFloat(a.rating || 0))
+          .slice(0, 3);
+        setCinemaMovies(withShowtimes);
+      } catch {}
+    }
+    load();
+  }, []);
+
+  if (cinemaMovies.length === 0) return null;
 
   return (
     <section>
@@ -435,12 +453,12 @@ function Trending({ movies }) {
         <Flame size={16} className="text-cyan-400" /> Trending this week
       </h2>
       <div className="flex flex-col divide-y divide-white/10 rounded-xl border border-white/10 bg-neutral-900">
-        {top.map((m, i) => (
-          <div key={m.id} className="flex items-center gap-3 px-4 py-3.5">
+        {cinemaMovies.map((m, i) => (
+          <Link key={m.id} to={`/booking/${m.showtimes[0]?.id}`} className="flex items-center gap-3 px-4 py-3.5 hover:bg-neutral-800/50">
             <span className="w-5 text-[13px] font-semibold text-cyan-400">{i + 1}</span>
-            {m.poster_path && (
+            {m.poster_url && (
               <img
-                src={`${POSTER_BASE}${m.poster_path}`}
+                src={m.poster_url}
                 alt={m.title}
                 className="h-12 w-8 flex-shrink-0 rounded object-cover"
               />
@@ -453,9 +471,9 @@ function Trending({ movies }) {
             </div>
             <span className="flex items-center gap-1 text-[12px] font-medium text-cyan-300">
               <Star size={11} className="fill-cyan-300 text-cyan-300" />
-              {m.vote_average?.toFixed(1)}
+              {m.rating ? parseFloat(m.rating).toFixed(1) : '—'}
             </span>
-          </div>
+          </Link>
         ))}
       </div>
     </section>
@@ -578,7 +596,7 @@ function HomePage() {
             error={error}
             query={query}
           />
-          <Trending movies={displayMovies} />
+          <Trending />
         </div>
       </main>
       <Footer />
