@@ -182,6 +182,8 @@ function Hero({ query, setQuery }) {
 --------------------------------------------------------- */
 function AddCinemaModal({ movie, onClose, onAdd }) {
   const navigate = useNavigate();
+  const token = localStorage.getItem('token');
+  const authHeaders = token ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } : { 'Content-Type': 'application/json' };
   const [cinemas, setCinemas] = useState([]);
   const [cinemaId, setCinemaId] = useState('');
   const [showtime, setShowtime] = useState('');
@@ -205,7 +207,7 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
     try {
       const movieRes = await fetch('/api/movies', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           title: movie.title,
           description: movie.overview || '',
@@ -223,7 +225,7 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
 
       const stRes = await fetch('/api/showtimes', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({
           movie_id: createdMovie.id,
           cinema_id: parseInt(cinemaId),
