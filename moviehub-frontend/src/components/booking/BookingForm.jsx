@@ -7,7 +7,9 @@ import { getOccupiedSeats } from '../../api/showtimes';
 
 export default function BookingForm({ movie = {}, showtimes = [] }) {
 	const navigate = useNavigate();
-	const [showtimeId, setShowtimeId] = useState(showtimes[0]?.id || '');
+	const now = new Date();
+	const upcomingShowtimes = showtimes.filter(s => new Date(s.startsAt) > now);
+	const [showtimeId, setShowtimeId] = useState(upcomingShowtimes[0]?.id || '');
 	const [selectedSeats, setSelectedSeats] = useState([]);
 	const [occupiedSeats, setOccupiedSeats] = useState([]);
 	const [loading, setLoading] = useState(false);
@@ -39,10 +41,10 @@ export default function BookingForm({ movie = {}, showtimes = [] }) {
 
 	// update initial selected showtime when showtimes prop changes
 	React.useEffect(() => {
-		if (showtimes && showtimes.length && !showtimeId) {
-			setShowtimeId(showtimes[0].id);
+		if (upcomingShowtimes && upcomingShowtimes.length && !showtimeId) {
+			setShowtimeId(upcomingShowtimes[0].id);
 		}
-	}, [showtimes]);
+	}, [upcomingShowtimes, showtimeId]);
 
 	async function handleSubmit(e) {
 		e.preventDefault();
@@ -74,8 +76,9 @@ export default function BookingForm({ movie = {}, showtimes = [] }) {
 					className="mt-1 block w-full border rounded p-2"
 				>
 					<option value="">Select a showtime</option>
+					{upcomingShowtimes.length === 0 && <option disabled>No upcoming showtimes</option>}
 					{Object.entries(
-						showtimes.reduce((acc, s) => {
+						upcomingShowtimes.reduce((acc, s) => {
 							const key = s.cinemaName || 'Other';
 							if (!acc[key]) acc[key] = [];
 							acc[key].push(s);

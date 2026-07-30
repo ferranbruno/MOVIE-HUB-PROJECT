@@ -29,6 +29,10 @@ def create_booking():
     if not showtime:
         return jsonify({"message": "Showtime not found"}), 404
 
+    from datetime import datetime, timezone
+    if showtime.start_time and showtime.start_time < datetime.now(timezone.utc):
+        return jsonify({"message": "This showtime has already started"}), 400
+
     booking = Booking(
         user_id=user_id,
         showtime_id=showtime_id,
