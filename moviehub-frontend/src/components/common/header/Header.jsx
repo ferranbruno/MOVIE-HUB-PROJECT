@@ -12,7 +12,7 @@ function Header() {
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
           <a href="#browse" className="transition hover:text-white">Browse movies</a>
-          <a href="#now-showing" className="transition hover:text-white">Now showing</a>
+          <Link to="/cinemas" className="transition hover:text-white">Now showing</Link>
         </nav>
       </div>
     </header>
