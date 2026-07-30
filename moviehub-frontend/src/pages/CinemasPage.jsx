@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clapperboard, MapPin, Clock, Star } from 'lucide-react';
+import { Clapperboard, MapPin, Clock, Star, Loader2 } from 'lucide-react';
 
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w342';
 
@@ -9,101 +9,39 @@ function getPosterUrl(path) {
   return path.startsWith('http') ? path : `${POSTER_BASE}${path}`;
 }
 
-function InfoModal({ cinema, onClose }) {
-  if (!cinema) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4">
-      <div className="w-full max-w-xl rounded-3xl border border-white/10 bg-slate-900 p-6 shadow-2xl shadow-black/40">
-        <div className="mb-4 flex items-start justify-between gap-4">
-          <div>
-            <h2 className="text-xl font-semibold text-white">{cinema.movie}</h2>
-            <p className="text-sm text-slate-400">{cinema.name} · {cinema.genre}</p>
-          </div>
-          <button
-            onClick={onClose}
-            className="rounded-full border border-white/10 bg-slate-950 px-3 py-2 text-sm text-slate-300 hover:bg-slate-900"
-          >
-            Close
-          </button>
-        </div>
-        <div className="space-y-3 text-sm text-slate-300">
-          <p><span className="font-semibold text-white">Cinema:</span> {cinema.name}</p>
-          <p><span className="font-semibold text-white">Showtime:</span> {cinema.showtimes[0]}</p>
-          <p><span className="font-semibold text-white">Price:</span> {cinema.price}</p>
-          <p><span className="font-semibold text-white">Rating:</span> {cinema.rating.toFixed(1)}</p>
-          <p><span className="font-semibold text-white">Location:</span> {cinema.location}</p>
-          <p><span className="font-semibold text-white">When:</span> {cinema.date}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function CinemasPage() {
-  const [assignments, setAssignments] = useState(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      return JSON.parse(localStorage.getItem('moviehub-assignments') || '{}');
-    } catch {
-      return {};
-    }
-  });
-  const [ratings, setRatings] = useState(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      return JSON.parse(localStorage.getItem('moviehub-ratings') || '{}');
-    } catch {
-      return {};
-    }
-  });
-  const [infoCinema, setInfoCinema] = useState(null);
+  const [movies, setMovies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
-    const handleStorage = (event) => {
-      if (event.key === 'moviehub-assignments') {
-        try {
-          setAssignments(JSON.parse(event.newValue || '{}'));
-        } catch {
-          setAssignments({});
-        }
+    async function load() {
+      try {
+        const res = await fetch('/api/movies');
+        if (!res.ok) throw new Error('Failed to load movies');
+        const data = await res.json();
+        setMovies(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
-      if (event.key === 'moviehub-ratings') {
-        try {
-          setRatings(JSON.parse(event.newValue || '{}'));
-        } catch {
-          setRatings({});
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
+    }
+    load();
   }, []);
 
-  useEffect(() => {
-    localStorage.setItem('moviehub-ratings', JSON.stringify(ratings));
-  }, [ratings]);
-
-  const addedCinemas = Object.entries(assignments).flatMap(([movieId, entries]) =>
-    entries.map((entry, index) => ({
-      id: `${movieId}-${index}`,
-      name: entry.cinema,
-      location: entry.cinema,
-      logo: '🎬',
-      logoBg: 'bg-cyan-100 text-cyan-600',
-      movie: entry.title,
-      genre: entry.release_date ? `Release ${new Date(entry.release_date).getFullYear()}` : 'Added movie',
-      duration: 'Showtime',
-      date: 'Now',
-      showtimes: [entry.showtime],
-      price: entry.price,
-      screen: 'Screen 1',
-      rating: entry.vote_average ?? 0,
-      posterPath: entry.poster_path,
-      posterUrl: getPosterUrl(entry.poster_path),
-      isAdded: true,
-      info: entry,
+  const items = movies.flatMap((m) =>
+    (m.showtimes || []).map((st) => ({
+      id: st.id,
+      movieId: m.id,
+      title: m.title,
+      posterUrl: getPosterUrl(m.poster_url),
+      cinemaName: st.cinema?.name || '',
+      screen: st.screen || '',
+      startTime: st.start_time,
+      price: st.price ? `$${parseFloat(st.price).toFixed(2)}` : '—',
+      rating: m.rating,
+      description: m.description,
     }))
   );
 
@@ -122,9 +60,9 @@ function CinemasPage() {
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div>
             <p className="text-sm uppercase tracking-[0.3em] text-cyan-300">Cinemas</p>
-            <h1 className="mt-2 text-3xl font-semibold text-white">Your added movies</h1>
+            <h1 className="mt-2 text-3xl font-semibold text-white">Now showing</h1>
             <p className="mt-1 max-w-2xl text-sm text-slate-400">
-              Movies to watch at your local cinemas.
+              Browse movies and book your seats.
             </p>
           </div>
           <div className="flex flex-wrap gap-3">
@@ -139,11 +77,24 @@ function CinemasPage() {
       </header>
 
       <main className="px-6 py-8 lg:px-8">
-        {addedCinemas.length === 0 ? (
+        {loading && (
+          <div className="flex items-center gap-2 py-10 text-slate-400">
+            <Loader2 size={16} className="animate-spin" />
+            <span className="text-[13px]">Loading movies…</span>
+          </div>
+        )}
+
+        {error && (
+          <div className="rounded-3xl border border-red-500/30 bg-red-500/10 p-8 text-center text-red-300">
+            <p className="text-[13px]">{error}</p>
+          </div>
+        )}
+
+        {!loading && !error && items.length === 0 && (
           <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-10 text-center text-slate-300">
-            <p className="text-lg font-semibold text-white">No cinemas added yet</p>
+            <p className="text-lg font-semibold text-white">No showtimes available</p>
             <p className="mt-2 text-sm text-slate-400">
-              Use the homepage search and Add cinema button to save TMDB movies here.
+              Use the homepage to search TMDB movies and add them with a cinema and showtime.
             </p>
             <Link
               to="/"
@@ -152,14 +103,16 @@ function CinemasPage() {
               Add a movie
             </Link>
           </div>
-        ) : (
+        )}
+
+        {!loading && !error && items.length > 0 && (
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-            {addedCinemas.map((cinema) => (
-              <div key={cinema.id} className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
-                {cinema.posterUrl ? (
+            {items.map((item) => (
+              <div key={item.id} className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
+                {item.posterUrl ? (
                   <img
-                    src={cinema.posterUrl}
-                    alt={cinema.movie}
+                    src={item.posterUrl}
+                    alt={item.title}
                     className="h-56 w-full object-cover"
                   />
                 ) : (
@@ -170,49 +123,44 @@ function CinemasPage() {
 
                 <div className="p-5">
                   <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className={`flex h-11 w-11 items-center justify-center rounded-2xl text-lg ${cinema.logoBg}`}>
-                      {cinema.logo}
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-100 text-lg text-cyan-600">
+                      🎬
                     </div>
                     <span className="rounded-full bg-cyan-500 px-3 py-1 text-[11px] font-semibold text-slate-950">
-                      {cinema.price}
+                      {item.price}
                     </span>
                   </div>
 
                   <div className="mb-4">
-                    <p className="text-xl font-semibold text-white truncate">{cinema.movie}</p>
-                    <p className="mt-1 text-sm text-slate-400 truncate">{cinema.name}</p>
+                    <p className="text-xl font-semibold text-white truncate">{item.title}</p>
+                    <p className="mt-1 text-sm text-slate-400 truncate">{item.cinemaName}{item.screen ? ` (${item.screen})` : ''}</p>
                   </div>
 
                   <div className="mb-4 flex flex-wrap gap-3 text-[12px] text-slate-400">
                     <span className="inline-flex items-center gap-1">
-                      <MapPin size={12} /> {cinema.location}
+                      <MapPin size={12} /> {item.cinemaName || '—'}
                     </span>
                     <span className="inline-flex items-center gap-1">
-                      <Clock size={12} /> {cinema.showtimes[0]}
+                      <Clock size={12} /> {item.startTime ? new Date(item.startTime).toLocaleString() : '—'}
                     </span>
                   </div>
 
                   <div className="mb-4 flex items-center justify-between gap-3 text-sm text-slate-400">
-                    <span>{cinema.genre}</span>
-                    <span className="inline-flex items-center gap-1 text-cyan-300">
-                      <Star size={14} /> {ratings[cinema.id] ?? cinema.rating?.toFixed(1) ?? '—'}
-                    </span>
+                    <span>{item.screen || 'Standard'}</span>
+                    {item.rating && (
+                      <span className="inline-flex items-center gap-1 text-cyan-300">
+                        <Star size={14} /> {parseFloat(item.rating).toFixed(1)}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex flex-col gap-3">
                     <Link
-                      to={`/booking/${cinema.id}`}
+                      to={`/booking/${item.id}`}
                       className="rounded-2xl bg-cyan-500 px-4 py-3 text-center text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
                     >
                       Book seats
                     </Link>
-                    <button
-                      type="button"
-                      onClick={() => setInfoCinema(cinema)}
-                      className="rounded-2xl border border-white/10 bg-slate-950 px-4 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-900"
-                    >
-                      View info
-                    </button>
                   </div>
                 </div>
               </div>
@@ -220,8 +168,6 @@ function CinemasPage() {
           </div>
         )}
       </main>
-
-      <InfoModal cinema={infoCinema} onClose={() => setInfoCinema(null)} />
     </div>
   );
 }

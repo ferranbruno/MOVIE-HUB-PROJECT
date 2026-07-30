@@ -20,8 +20,6 @@ import {
 } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 
-const DEFAULT_GENRES = ['Action', 'Sci-Fi', 'Drama', 'Thriller', 'Documentary'];
-
 function EditProfileModal({ user, onClose, onSave }) {
   const [name, setName] = useState(user?.full_name || user?.name || '');
   const [saving, setSaving] = useState(false);
@@ -166,21 +164,19 @@ function ProfileCard({ user, onEdit, onSettings, upcomingBooking, loyaltyPoints 
         >
           <Pencil size={14} />
         </button>
+        <div className="absolute -bottom-10 left-6 h-20 w-20 overflow-hidden rounded-full border-4 border-slate-800">
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-cyan-400 to-blue-500 text-2xl font-semibold text-white">
+            {userName.charAt(0).toUpperCase()}
+          </div>
+        </div>
       </div>
 
-      <div className="px-6 pb-6">
-        <div className="-mt-10 mb-3 flex items-end justify-between">
-          <div className="h-20 w-20 flex-shrink-0 overflow-hidden rounded-full border-4 border-slate-800">
-            <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-cyan-400 to-blue-500 text-2xl font-semibold text-white">
-              {userName.charAt(0).toUpperCase()}
-            </div>
-          </div>
-          <div className="pb-1 text-right">
-            <p className="text-[11px] text-slate-400">Current role</p>
-            <p className="text-[13px] font-medium text-white">
-              {userRole === 'admin' ? 'Admin' : 'Movie fan'}
-            </p>
-          </div>
+      <div className="px-6 pb-6 pt-14">
+        <div className="mb-3 text-right">
+          <p className="text-[11px] text-slate-400">Current role</p>
+          <p className="text-[13px] font-medium text-white">
+            {userRole === 'admin' ? 'Admin' : 'Movie fan'}
+          </p>
         </div>
 
         <h2 className="text-lg font-semibold text-white">{userName}</h2>
@@ -211,7 +207,7 @@ function ProfileCard({ user, onEdit, onSettings, upcomingBooking, loyaltyPoints 
             Favorite genres <Star size={11} />
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {DEFAULT_GENRES.map((g) => (
+            {(user?.favorite_genres?.length ? user.favorite_genres : ['Action', 'Sci-Fi', 'Drama', 'Thriller', 'Documentary']).map((g) => (
               <span
                 key={g}
                 className="rounded-md bg-slate-800 px-2.5 py-1 text-[11.5px] font-medium text-slate-300"
@@ -276,10 +272,21 @@ export default function ProfilePage() {
   const navigate = useNavigate();
   const { token, user, logout, isAuthenticated, setUser } = useAuth();
   const [bookings, setBookings] = useState([]);
+  const [localBookings, setLocalBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [cancellingId, setCancellingId] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('moviehub-local-bookings');
+      setLocalBookings(raw ? JSON.parse(raw) : []);
+    } catch {
+      setLocalBookings([]);
+    }
+  }, []);
 
   useEffect(() => {
     if (!token) {
@@ -287,6 +294,19 @@ export default function ProfilePage() {
       setLoading(false);
       return;
     }
+
+    async function fetchPoints() {
+      try {
+        const res = await fetch('/api/users/loyalty-points', {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setLoyaltyPoints(data.loyalty_points ?? 0);
+        }
+      } catch {}
+    }
+    fetchPoints();
 
     async function fetchBookings() {
       try {
@@ -341,7 +361,6 @@ export default function ProfilePage() {
   const upcoming = bookings.filter((b) => b.status !== 'cancelled');
   const cancelled = bookings.filter((b) => b.status === 'cancelled');
   const nextBooking = upcoming.length > 0 ? upcoming[0] : null;
-  const loyaltyPoints = bookings.length * 20;
 
   if (!isAuthenticated) {
     return (
@@ -446,6 +465,36 @@ export default function ProfilePage() {
                     <div className="flex flex-col gap-3 opacity-60">
                       {cancelled.map((b) => (
                         <BookingRow key={b.id} booking={b} onCancel={() => {}} cancelling={false} />
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {localBookings.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="mb-3 text-[14px] font-semibold text-cyan-400">
+                      Cinema bookings
+                    </h3>
+                    <div className="flex flex-col gap-3">
+                      {localBookings.map((b) => (
+                        <div key={b.id} className="flex flex-col gap-3 rounded-2xl border border-white/10 bg-slate-900/80 p-4 sm:flex-row sm:items-center sm:justify-between">
+                          <div className="min-w-0">
+                            <p className="truncate text-[15px] font-semibold text-white">{b.movie}</p>
+                            <div className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-slate-400">
+                              <span className="flex items-center gap-1">
+                                <MapPin size={12} /> {b.cinema}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Calendar size={12} /> {new Date(b.date).toLocaleDateString()}
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Clock size={12} /> {b.showtime}
+                              </span>
+                              <span>{b.seats.length} seat{b.seats.length !== 1 ? 's' : ''}: {b.seats.join(', ')}</span>
+                            </div>
+                          </div>
+                          <span className="rounded-full bg-cyan-500/15 px-2.5 py-0.5 text-[11px] font-semibold text-cyan-300">Offline</span>
+                        </div>
                       ))}
                     </div>
                   </div>

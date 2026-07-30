@@ -1,6 +1,5 @@
-import React from 'react';
-import Login from '../components/auth/Login';
+import AuthPage from './AuthPage';
 
 export default function LoginPage() {
-  return <Login />;
+  return <AuthPage initialMode="signin" />;
 }
