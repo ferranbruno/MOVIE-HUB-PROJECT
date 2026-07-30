@@ -35,20 +35,24 @@ export default function BookingPage() {
         const movieRes = await fetch(`/api/movies/${st.movie_id}`);
         const m = movieRes.ok ? await movieRes.json() : null;
         setNextShowtime({ ...st, movieTitle: m?.title || '' });
+        calcCountdown(st.start_time);
       } catch {}
     }
     fetchNext();
   }, []);
 
+  function calcCountdown(target) {
+    const diff = new Date(target) - new Date();
+    if (diff <= 0) { setCountdown('NOW'); return; }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    setCountdown(`${h}h ${m}m`);
+  }
+
   useEffect(() => {
     if (!nextShowtime) return;
-    const id2 = setInterval(() => {
-      const diff = new Date(nextShowtime.start_time) - new Date();
-      if (diff <= 0) { setCountdown('NOW'); return; }
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      setCountdown(`${h}h ${m}m`);
-    }, 1000);
+    calcCountdown(nextShowtime.start_time);
+    const id2 = setInterval(() => calcCountdown(nextShowtime.start_time), 1000);
     return () => clearInterval(id2);
   }, [nextShowtime]);
 
@@ -169,15 +173,19 @@ export default function BookingPage() {
             </div>
           </div>
         </div>
-        {nextShowtime && countdown && nextShowtime.id !== parseInt(id) && (
+        {nextShowtime && (
           <Link
             to={`/booking/${nextShowtime.id}`}
             className="mx-8 mt-4 flex items-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-[13px] text-cyan-200 hover:bg-cyan-500/20"
           >
             <span>Next premiere:</span>
             <span className="font-semibold">{nextShowtime.movieTitle}</span>
-            <span className="text-slate-500">—</span>
-            <span className="tabular-nums font-semibold">in {countdown}</span>
+            {countdown && (
+              <>
+                <span className="text-slate-500">—</span>
+                <span className="tabular-nums font-semibold">in {countdown}</span>
+              </>
+            )}
           </Link>
         )}
       </header>

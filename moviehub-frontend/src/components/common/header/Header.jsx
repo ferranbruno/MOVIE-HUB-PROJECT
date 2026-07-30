@@ -20,24 +20,28 @@ function NextShowtime() {
         const movieRes = await fetch(`/api/movies/${st.movie_id}`);
         const movie = movieRes.ok ? await movieRes.json() : null;
         setNext({ ...st, movieTitle: movie?.title || '' });
+        calcCountdown(st.start_time);
       } catch {}
     }
     fetchNext();
   }, []);
 
+  function calcCountdown(target) {
+    const diff = new Date(target) - new Date();
+    if (diff <= 0) { setCountdown('NOW'); return; }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    setCountdown(`in ${h}h ${m}m`);
+  }
+
   useEffect(() => {
     if (!next) return;
-    const id = setInterval(() => {
-      const diff = new Date(next.start_time) - new Date();
-      if (diff <= 0) { setCountdown('NOW'); return; }
-      const h = Math.floor(diff / 3600000);
-      const m = Math.floor((diff % 3600000) / 60000);
-      setCountdown(`in ${h}h ${m}m`);
-    }, 1000);
+    calcCountdown(next.start_time);
+    const id = setInterval(() => calcCountdown(next.start_time), 1000);
     return () => clearInterval(id);
   }, [next]);
 
-  if (!next || !countdown) return null;
+  if (!next) return null;
   return (
     <Link to={`/booking/${next.id}`} className="hidden items-center gap-1.5 text-[12px] text-cyan-300 hover:text-cyan-200 lg:flex">
       <span className="truncate max-w-[120px]">{next.movieTitle}</span>
