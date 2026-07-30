@@ -1,4 +1,18 @@
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+
+function Clock() {
+  const [time, setTime] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setTime(new Date()), 1000);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <span className="text-[13px] tabular-nums text-slate-400">
+      {time.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+    </span>
+  );
+}
 
 function Header() {
   return (
@@ -13,6 +27,7 @@ function Header() {
         <nav className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
           <a href="#browse" className="transition hover:text-white">Browse movies</a>
           <Link to="/cinemas" className="transition hover:text-white">Now showing</Link>
+          <Clock />
         </nav>
       </div>
     </header>
