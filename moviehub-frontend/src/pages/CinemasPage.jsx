@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clapperboard, MapPin, Clock, Star, Loader2 } from 'lucide-react';
+import { Clapperboard, MapPin, Clock, Star, Loader2, Trash2 } from 'lucide-react';
+import useAuth from '../hooks/useAuth';
 
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w342';
 
@@ -10,9 +11,12 @@ function getPosterUrl(path) {
 }
 
 function CinemasPage() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [movies, setMovies] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -29,6 +33,31 @@ function CinemasPage() {
     }
     load();
   }, []);
+
+  async function handleDelete(showtimeId, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!confirm('Delete this showtime?')) return;
+    setDeletingId(showtimeId);
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`/api/showtimes/${showtimeId}`, {
+        method: 'DELETE',
+        headers: token ? { Authorization: `Bearer ${token}` } : {},
+      });
+      if (!res.ok) throw new Error('Failed to delete');
+      setMovies((prev) =>
+        prev.map((m) => ({
+          ...m,
+          showtimes: (m.showtimes || []).filter((st) => st.id !== showtimeId),
+        }))
+      );
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   const now = new Date();
   const items = movies.flatMap((m) =>
@@ -162,6 +191,16 @@ function CinemasPage() {
                     >
                       Book seats
                     </Link>
+                    {isAdmin && (
+                      <button
+                        onClick={(e) => handleDelete(item.id, e)}
+                        disabled={deletingId === item.id}
+                        className="flex items-center justify-center gap-1.5 rounded-2xl border border-red-500/30 px-4 py-2.5 text-[12px] font-medium text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"
+                      >
+                        <Trash2 size={13} />
+                        {deletingId === item.id ? 'Deleting…' : 'Delete'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>

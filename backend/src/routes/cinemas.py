@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
 from src.extensions import db
-from src.models import Cinema
+from src.models import Cinema, Showtime, Booking, BookingSeat, Seat
 from src.schemas import CinemaSchema
 from src.decorators import admin_required
 
@@ -34,3 +34,24 @@ def create_cinema():
 
     schema = CinemaSchema()
     return jsonify(schema.dump(cinema)), 201
+
+
+@cinemas_bp.route("/<int:cinema_id>", methods=["DELETE"])
+@jwt_required()
+@admin_required
+def delete_cinema(cinema_id):
+    cinema = Cinema.query.get(cinema_id)
+    if not cinema:
+        return jsonify({"message": "Cinema not found"}), 404
+
+    showtimes = Showtime.query.filter_by(cinema_id=cinema_id).all()
+    for st in showtimes:
+        bookings = Booking.query.filter_by(showtime_id=st.id).all()
+        for b in bookings:
+            BookingSeat.query.filter_by(booking_id=b.id).delete()
+            db.session.delete(b)
+        db.session.delete(st)
+    Seat.query.filter_by(cinema_id=cinema_id).delete()
+    db.session.delete(cinema)
+    db.session.commit()
+    return jsonify({"message": "Cinema deleted"}), 200
