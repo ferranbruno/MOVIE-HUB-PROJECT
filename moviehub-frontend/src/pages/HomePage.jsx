@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Search,
   LogIn,
@@ -30,13 +30,18 @@ const isPlaceholderApiKey = TMDB_API_KEY === 'YOUR_TMDB_API_KEY';
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w342';
 
-/** In a real app, fetch this from GET /cinemas instead of hardcoding. */
-const availableCinemas = [
-  'Grand Palace Cinema',
-  'Silver Screen Multiplex',
-  'Starlight Theatres',
-  'Vista IMAX',
-];
+let cinemasCache = null;
+async function getCinemas() {
+  if (cinemasCache) return cinemasCache;
+  try {
+    const res = await fetch('/api/cinemas');
+    if (res.ok) {
+      cinemasCache = await res.json();
+      return cinemasCache;
+    }
+  } catch {}
+  return [];
+}
 
 
 
@@ -176,14 +181,66 @@ function Hero({ query, setQuery }) {
    Add Cinema modal
 --------------------------------------------------------- */
 function AddCinemaModal({ movie, onClose, onAdd }) {
-  const [cinema, setCinema] = useState(availableCinemas[0]);
+  const navigate = useNavigate();
+  const [cinemas, setCinemas] = useState([]);
+  const [cinemaId, setCinemaId] = useState('');
   const [showtime, setShowtime] = useState('');
   const [price, setPrice] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
-  function handleSubmit(e) {
+  useEffect(() => {
+    getCinemas().then((list) => {
+      setCinemas(list);
+      if (list.length > 0) setCinemaId(String(list[0].id));
+    });
+  }, []);
+
+  async function handleSubmit(e) {
     e.preventDefault();
-    if (!showtime || !price) return;
-    onAdd({ cinema, showtime, price: `$${parseFloat(price).toFixed(2)}` });
+    if (!showtime || !price || !cinemaId) return;
+
+    setLoading(true);
+    setError(null);
+    try {
+      const movieRes = await fetch('/api/movies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: movie.title,
+          description: movie.overview || '',
+          poster_url: movie.poster_path ? `${POSTER_BASE}${movie.poster_path}` : null,
+          release_date: movie.release_date || null,
+          rating: movie.vote_average || null,
+        }),
+      });
+      const createdMovie = await movieRes.json();
+      if (!movieRes.ok) throw new Error(createdMovie?.message || 'Failed to create movie');
+
+      const now = new Date();
+      const [hours, minutes] = showtime.split(':');
+      const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +hours, +minutes);
+
+      const stRes = await fetch('/api/showtimes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          movie_id: createdMovie.id,
+          cinema_id: parseInt(cinemaId),
+          screen: 'Screen 1',
+          start_time: startTime.toISOString(),
+          price: parseFloat(price).toFixed(2),
+        }),
+      });
+      const createdSt = await stRes.json();
+      if (!stRes.ok) throw new Error(createdSt?.message || 'Failed to create showtime');
+
+      navigate(`/booking/${createdSt.id}`);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -203,13 +260,14 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
           <label className="flex flex-col gap-1">
             <span className="text-[11.5px] font-medium text-neutral-500">Cinema</span>
             <select
-              value={cinema}
-              onChange={(e) => setCinema(e.target.value)}
+              value={cinemaId}
+              onChange={(e) => setCinemaId(e.target.value)}
               className="rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-[13px] text-white focus:border-cyan-400 focus:outline-none"
             >
-              {availableCinemas.map((c) => (
-                <option key={c} value={c}>
-                  {c}
+              {cinemas.length === 0 && <option value="">Loading...</option>}
+              {cinemas.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
                 </option>
               ))}
             </select>
@@ -238,11 +296,13 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
             />
           </label>
 
+          {error && <div className="text-[12px] text-red-400">{error}</div>}
           <button
             type="submit"
-            className="mt-2 rounded-md bg-gradient-to-r from-cyan-400 to-blue-500 py-2.5 text-[13px] font-medium text-neutral-950 hover:opacity-90"
+            disabled={loading}
+            className="mt-2 rounded-md bg-gradient-to-r from-cyan-400 to-blue-500 py-2.5 text-[13px] font-medium text-neutral-950 hover:opacity-90 disabled:opacity-50"
           >
-            Add to movie
+            {loading ? 'Creating...' : 'Add to movie'}
           </button>
         </form>
       </div>
@@ -252,10 +312,12 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
 
 /* ---------------------------------------------------------
    Movie card — poster with rating badge overlaid top-right,
-   cinema assignments as chips, Add cinema action
+   Add cinema action
 --------------------------------------------------------- */
-function MovieCard({ movie, assignments, onOpenAddCinema }) {
+function MovieCard({ movie, onOpenAddCinema }) {
   const year = movie.release_date ? movie.release_date.slice(0, 4) : '—';
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-white/10 bg-neutral-900">
@@ -284,28 +346,14 @@ function MovieCard({ movie, assignments, onOpenAddCinema }) {
           <p className="text-[11px] text-neutral-500">{year}</p>
         </div>
 
-        {assignments.length > 0 && (
-          <div className="flex flex-col gap-1">
-            {assignments.map((a, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-1.5 rounded-md bg-neutral-950/70 px-2 py-1 text-[11px] text-neutral-300"
-              >
-                <MapPin size={10} className="flex-shrink-0 text-cyan-400" />
-                <span className="truncate">
-                  {a.cinema} · {a.showtime} · {a.price}
-                </span>
-              </div>
-            ))}
-          </div>
+        {isAdmin && (
+          <button
+            onClick={() => onOpenAddCinema(movie)}
+            className="mt-auto flex items-center justify-center gap-1 rounded-md border border-white/10 py-1.5 text-[11.5px] font-medium text-neutral-300 hover:border-amber-400/50 hover:text-amber-300"
+          >
+            <Plus size={13} /> Add cinema
+          </button>
         )}
-
-        <button
-          onClick={() => onOpenAddCinema(movie)}
-          className="mt-auto flex items-center justify-center gap-1 rounded-md border border-white/10 py-1.5 text-[11.5px] font-medium text-neutral-300 hover:border-amber-400/50 hover:text-amber-300"
-        >
-          <Plus size={13} /> Add cinema
-        </button>
       </div>
     </div>
   );
@@ -314,11 +362,10 @@ function MovieCard({ movie, assignments, onOpenAddCinema }) {
 /* ---------------------------------------------------------
    Now Showing — fetches real movies, holds cinema assignments
 --------------------------------------------------------- */
-function NowShowing({ movies, loading, error, query, assignments, onAssign }) {
+function NowShowing({ movies, loading, error, query }) {
   const [activeMovie, setActiveMovie] = useState(null);
 
-  function handleAdd(entry) {
-    onAssign(activeMovie, entry);
+  function handleAdd() {
     setActiveMovie(null);
   }
 
@@ -356,7 +403,6 @@ function NowShowing({ movies, loading, error, query, assignments, onAssign }) {
             <MovieCard
               key={movie.id}
               movie={movie}
-              assignments={assignments[movie.id] ?? []}
               onOpenAddCinema={setActiveMovie}
             />
           ))}
@@ -424,20 +470,8 @@ function HomePage() {
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [assignments, setAssignments] = useState(() => {
-    if (typeof window === 'undefined') return {};
-    try {
-      return JSON.parse(localStorage.getItem('moviehub-assignments') || '{}');
-    } catch {
-      return {};
-    }
-  });
 
   const displayMovies = query.trim() ? searchResults ?? [] : movies;
-
-  useEffect(() => {
-    localStorage.setItem('moviehub-assignments', JSON.stringify(assignments));
-  }, [assignments]);
 
   useEffect(() => {
     async function fetchMovies() {
@@ -525,33 +559,6 @@ function HomePage() {
     };
   }, [query]);
 
-  function handleAssign(movie, entry) {
-    setAssignments((prev) => ({
-      ...prev,
-      [movie.id]: [
-        ...(prev[movie.id] ?? []),
-        {
-          cinema: entry.cinema,
-          showtime: entry.showtime,
-          price: entry.price,
-          title: movie.title,
-          poster_path: movie.poster_path,
-          release_date: movie.release_date,
-          vote_average: movie.vote_average,
-        },
-      ],
-      /*
-       * Real backend version: also POST to your API here, e.g.
-       *   await fetch('/api/showtimes', {
-       *     method: 'POST',
-       *     headers: { 'Content-Type': 'application/json' },
-       *     body: JSON.stringify({ movie_id: movie.id, cinema: entry.cinema,
-       *       start_time: entry.showtime, price: entry.price }),
-       *   });
-       */
-    }));
-  }
-
   return (
     <div className="page-shell">
       <Header />
@@ -568,8 +575,6 @@ function HomePage() {
             loading={loading}
             error={error}
             query={query}
-            assignments={assignments}
-            onAssign={handleAssign}
           />
           <Trending movies={displayMovies} />
         </div>

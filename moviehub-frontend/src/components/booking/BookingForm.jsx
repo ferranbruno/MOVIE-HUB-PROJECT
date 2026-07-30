@@ -10,8 +10,6 @@ export default function BookingForm({ movie = {}, showtimes = [] }) {
 	const [showtimeId, setShowtimeId] = useState(showtimes[0]?.id || '');
 	const [selectedSeats, setSelectedSeats] = useState([]);
 	const [occupiedSeats, setOccupiedSeats] = useState([]);
-	const [name, setName] = useState('');
-	const [email, setEmail] = useState('');
 	const [loading, setLoading] = useState(false);
 	const [error, setError] = useState(null);
 
@@ -56,11 +54,12 @@ export default function BookingForm({ movie = {}, showtimes = [] }) {
 
 		setLoading(true);
 		try {
-			await createBooking({ movieId: movie.id, showtimeId, seats: selectedSeats, name, email });
-			navigate('/bookings');
+			await createBooking({ movieId: movie.id, showtimeId, seats: selectedSeats });
+			setSelectedSeats([]);
+			setLoading(false);
+			navigate('/profile');
 		} catch (err) {
-			setError(err.message || 'Booking failed');
-		} finally {
+			setError(err.message || 'Booking failed — please try again.');
 			setLoading(false);
 		}
 	}
@@ -75,10 +74,21 @@ export default function BookingForm({ movie = {}, showtimes = [] }) {
 					className="mt-1 block w-full border rounded p-2"
 				>
 					<option value="">Select a showtime</option>
-					{showtimes.map((s) => (
-						<option key={s.id} value={s.id}>
-							{(s.movieTitle || movie?.title || 'Movie')} — {new Date(s.startsAt).toLocaleString()} — {s.cinemaName || s.room || ''}
-						</option>
+					{Object.entries(
+						showtimes.reduce((acc, s) => {
+							const key = s.cinemaName || 'Other';
+							if (!acc[key]) acc[key] = [];
+							acc[key].push(s);
+							return acc;
+						}, {})
+					).map(([cinema, sts]) => (
+						<optgroup key={cinema} label={cinema}>
+							{sts.map((s) => (
+								<option key={s.id} value={s.id}>
+									{s.room ? `${s.room} — ` : ''}{new Date(s.startsAt).toLocaleString()} — ${s.price || '—'}
+								</option>
+							))}
+						</optgroup>
 					))}
 				</select>
 			</div>
@@ -90,17 +100,6 @@ export default function BookingForm({ movie = {}, showtimes = [] }) {
 				</div>
 				<div className="md:col-span-1">
 					<NowMovieCard movie={movie} showtime={showtimes.find((s) => s.id === showtimeId)} selectedSeats={selectedSeats} />
-				</div>
-			</div>
-
-			<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-				<div>
-					<label className="block text-sm font-medium">Name</label>
-					<input value={name} onChange={(e) => setName(e.target.value)} className="mt-1 block w-full border rounded p-2" />
-				</div>
-				<div>
-					<label className="block text-sm font-medium">Email</label>
-					<input value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1 block w-full border rounded p-2" />
 				</div>
 			</div>
 

@@ -46,7 +46,7 @@ function NowShowingSection() {
     <section id="now-showing" className="px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
       <div className="mx-auto max-w-7xl">
         <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-white">Now Showing</h2>
+          <h2 className="text-2xl font-semibold text-white">To Be Premiered</h2>
           <a href="#" className="text-sm font-medium text-cyan-300">View all</a>
         </div>
         <div className="grid gap-5 md:grid-cols-3">

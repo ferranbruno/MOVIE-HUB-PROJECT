@@ -6,6 +6,7 @@ import ForgotPasswordPage from '../pages/ForgotPasswordPage';
 import ResetPasswordPage from '../pages/ResetPasswordPage';
 import SignupPage from '../pages/SignupPage';
 import BookingPage from '../pages/BookingPage';
+import BookingsPage from '../pages/BookingsPage';
 import CinemasPage from '../pages/CinemasPage';
 import ProfilePage from '../pages/ProfilePage';
 import PrivateRoute from './PrivateRoute';
@@ -19,10 +20,11 @@ function AppRoutes() {
         <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/cinemas" element={<CinemasPage />} />
-        <Route path="/booking/:id" element={<BookingPage />} />
-        <Route path="/movie/:id" element={<MovieDetailPage />} />
+        <Route path="/cinemas" element={<PrivateRoute><CinemasPage /></PrivateRoute>} />
+        <Route path="/booking/:id" element={<PrivateRoute><BookingPage /></PrivateRoute>} />
+        <Route path="/movie/:id" element={<PrivateRoute><MovieDetailPage /></PrivateRoute>} />
         <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+        <Route path="/bookings" element={<PrivateRoute><BookingsPage /></PrivateRoute>} />
         <Route path="*" element={<HomePage />} />
       </Routes>
     </BrowserRouter>
