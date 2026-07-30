@@ -32,7 +32,7 @@ function CinemasPage() {
 
   const now = new Date();
   const items = movies.flatMap((m) =>
-    (m.showtimes || []).filter((st) => new Date(st.start_time) > now).map((st) => ({
+    (m.showtimes || []).filter((st) => new Date(st.start_time) > new Date(now.getTime() - 3600000)).map((st) => ({
       id: st.id,
       movieId: m.id,
       title: m.title,

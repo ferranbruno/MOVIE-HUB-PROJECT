@@ -8,7 +8,7 @@ import { getOccupiedSeats } from '../../api/showtimes';
 export default function BookingForm({ movie = {}, showtimes = [] }) {
 	const navigate = useNavigate();
 	const now = new Date();
-	const upcomingShowtimes = showtimes.filter(s => new Date(s.startsAt) > now);
+	const upcomingShowtimes = showtimes.filter(s => new Date(s.startsAt) > new Date(now.getTime() - 3600000));
 	const [showtimeId, setShowtimeId] = useState(upcomingShowtimes[0]?.id || '');
 	const [selectedSeats, setSelectedSeats] = useState([]);
 	const [occupiedSeats, setOccupiedSeats] = useState([]);
