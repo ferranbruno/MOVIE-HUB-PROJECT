@@ -278,6 +278,44 @@ export default function ProfilePage() {
   const [cancellingId, setCancellingId] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
   const [loyaltyPoints, setLoyaltyPoints] = useState(0);
+  const [nextShowtime, setNextShowtime] = useState(null);
+  const [countdown, setCountdown] = useState('');
+
+  useEffect(() => {
+    async function fetchNext() {
+      try {
+        const res = await fetch('/api/showtimes');
+        if (!res.ok) return;
+        const all = await res.json();
+        const now = new Date();
+        const upcoming = all
+          .filter((s) => new Date(s.start_time) > now)
+          .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+        if (upcoming.length === 0) return;
+        const st = upcoming[0];
+        const movieRes = await fetch(`/api/movies/${st.movie_id}`);
+        const movie = movieRes.ok ? await movieRes.json() : null;
+        setNextShowtime({ ...st, movieTitle: movie?.title || '' });
+        calcCountdown(st.start_time);
+      } catch {}
+    }
+    fetchNext();
+  }, []);
+
+  function calcCountdown(target) {
+    const diff = new Date(target) - new Date();
+    if (diff <= 0) { setCountdown('NOW'); return; }
+    const h = Math.floor(diff / 3600000);
+    const m = Math.floor((diff % 3600000) / 60000);
+    setCountdown(`${h}h ${m}m`);
+  }
+
+  useEffect(() => {
+    if (!nextShowtime) return;
+    calcCountdown(nextShowtime.start_time);
+    const id = setInterval(() => calcCountdown(nextShowtime.start_time), 1000);
+    return () => clearInterval(id);
+  }, [nextShowtime]);
 
   useEffect(() => {
     try {
@@ -400,6 +438,21 @@ export default function ProfilePage() {
       </header>
 
       <main className="mx-auto max-w-6xl px-6 py-8 lg:px-8">
+        {nextShowtime && (
+          <Link
+            to={`/booking/${nextShowtime.id}`}
+            className="mb-6 flex items-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-[13px] text-cyan-200 hover:bg-cyan-500/20"
+          >
+            <span>Next premiere:</span>
+            <span className="font-semibold">{nextShowtime.movieTitle}</span>
+            {countdown && (
+              <>
+                <span className="text-slate-500">—</span>
+                <span className="tabular-nums font-semibold">in {countdown}</span>
+              </>
+            )}
+          </Link>
+        )}
         {error && !loading && (
           <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-[13px] text-red-300">
             {error}
