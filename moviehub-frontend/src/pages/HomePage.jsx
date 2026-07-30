@@ -362,7 +362,7 @@ function MovieCard({ movie, onOpenAddCinema }) {
 }
 
 /* ---------------------------------------------------------
-   Now Showing — fetches real movies, holds cinema assignments
+   To Be Premiered — fetches real movies, holds cinema assignments
 --------------------------------------------------------- */
 function NowShowing({ movies, loading, error, query }) {
   const [activeMovie, setActiveMovie] = useState(null);
@@ -374,7 +374,7 @@ function NowShowing({ movies, loading, error, query }) {
   return (
     <section>
       <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-[18px] font-semibold text-white">Now showing</h2>
+        <h2 className="text-[18px] font-semibold text-white">To Be Premiered</h2>
         <span className="text-[12px] text-neutral-500">via TMDB</span>
       </div>
 
