@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { ChevronLeft, MapPin, Calendar, Clock } from 'lucide-react';
 import { createBooking } from '../api/bookings';
 
@@ -17,6 +17,40 @@ export default function BookingPage() {
   const [error, setError] = useState(null);
   const [bookingLoading, setBookingLoading] = useState(false);
   const [confirmation, setConfirmation] = useState('');
+  const [nextShowtime, setNextShowtime] = useState(null);
+  const [countdown, setCountdown] = useState('');
+
+  useEffect(() => {
+    async function fetchNext() {
+      try {
+        const res = await fetch('/api/showtimes');
+        if (!res.ok) return;
+        const all = await res.json();
+        const now = new Date();
+        const upcoming = all
+          .filter((s) => new Date(s.start_time) > now)
+          .sort((a, b) => new Date(a.start_time) - new Date(b.start_time));
+        if (upcoming.length === 0) return;
+        const st = upcoming[0];
+        const movieRes = await fetch(`/api/movies/${st.movie_id}`);
+        const m = movieRes.ok ? await movieRes.json() : null;
+        setNextShowtime({ ...st, movieTitle: m?.title || '' });
+      } catch {}
+    }
+    fetchNext();
+  }, []);
+
+  useEffect(() => {
+    if (!nextShowtime) return;
+    const id2 = setInterval(() => {
+      const diff = new Date(nextShowtime.start_time) - new Date();
+      if (diff <= 0) { setCountdown('NOW'); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      setCountdown(`${h}h ${m}m`);
+    }, 1000);
+    return () => clearInterval(id2);
+  }, [nextShowtime]);
 
   useEffect(() => {
     async function load() {
@@ -135,6 +169,17 @@ export default function BookingPage() {
             </div>
           </div>
         </div>
+        {nextShowtime && countdown && nextShowtime.id !== parseInt(id) && (
+          <Link
+            to={`/booking/${nextShowtime.id}`}
+            className="mx-8 mt-4 flex items-center gap-2 rounded-2xl border border-cyan-500/20 bg-cyan-500/10 px-4 py-3 text-[13px] text-cyan-200 hover:bg-cyan-500/20"
+          >
+            <span>Next premiere:</span>
+            <span className="font-semibold">{nextShowtime.movieTitle}</span>
+            <span className="text-slate-500">—</span>
+            <span className="tabular-nums font-semibold">in {countdown}</span>
+          </Link>
+        )}
       </header>
 
       <div className="px-8 py-8">
