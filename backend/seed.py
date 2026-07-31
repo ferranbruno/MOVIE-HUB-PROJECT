@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+
 from src import create_app
 from src.extensions import db
 from src.models import Genre, Movie, Cinema, Seat, Showtime, User
@@ -6,7 +7,10 @@ from src.models import Genre, Movie, Cinema, Seat, Showtime, User
 app = create_app()
 
 with app.app_context():
-    db.drop_all()
+    if Cinema.query.count() > 0 or Movie.query.count() > 0:
+        print("Database already has data — skipping seed.")
+        raise SystemExit
+
     db.create_all()
 
     # ── Genres ──
@@ -17,73 +21,80 @@ with app.app_context():
         Genre(name="Sci-Fi"),
         Genre(name="Horror"),
         Genre(name="Animation"),
+        Genre(name="Documentary"),
     ]
     db.session.add_all(genres)
     db.session.flush()
 
     genre_map = {g.name: g.id for g in genres}
 
-    # ── Movies ──
+    # ── Movies (one distinct movie per cinema) ──
     movies = [
         Movie(
-            title="Inception",
-            description="A thief who steals corporate secrets through dream-sharing technology is given the task of planting an idea into a CEO's mind.",
-            duration=148,
-            genre_id=genre_map["Sci-Fi"],
-            rating=8.8,
-            release_date=datetime(2010, 7, 16),
-            poster_url="https://image.tmdb.org/t/p/w342/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg",
-        ),
-        Movie(
-            title="The Dark Knight",
-            description="When the menace known as the Joker wreaks havoc on Gotham, Batman must accept one of the greatest tests.",
-            duration=152,
-            genre_id=genre_map["Action"],
-            rating=9.0,
-            release_date=datetime(2008, 7, 18),
-            poster_url="https://image.tmdb.org/t/p/w342/qJ2tW6WMUDux911Ba1sT0v3TkLH.jpg",
-        ),
-        Movie(
-            title="Toy Story 4",
-            description="When a new toy called Forky joins Woody and the gang, a road trip reveals how big the world can be.",
-            duration=100,
-            genre_id=genre_map["Animation"],
-            rating=7.8,
-            release_date=datetime(2019, 6, 21),
-            poster_url="https://image.tmdb.org/t/p/w342/w9kR8qRmQ5B5U9lBxQ9zSfVq0oH.jpg",
-        ),
-        Movie(
-            title="Parasite",
-            description="Greed and class discrimination threaten the newly formed symbiotic relationship between the wealthy Park family and the destitute Kim clan.",
-            duration=132,
+            title="The Odyssey",
+            description="Odysseus, the legendary King of Ithaca, embarks on a long and perilous journey home following the Trojan War. Throughout his voyage, he is forced to confront the whims of gods, mythological monsters, and trials that stretch both his cunning and his humanity to the breaking point.",
+            duration=131,
             genre_id=genre_map["Drama"],
-            rating=8.5,
-            release_date=datetime(2019, 5, 30),
-            poster_url="https://image.tmdb.org/t/p/w342/7IiTTgloJzvGI1TAYymCfbfl3vT.jpg",
+            rating=7.9,
+            release_date=datetime(2026, 7, 15),
+            poster_url="https://image.tmdb.org/t/p/w342/5rhTDKUhPYvpdQIijFIs5VoWsON.jpg",
+            trailer_key="AyIZ9tiiN8I",
         ),
         Movie(
-            title="Get Out",
-            description="A young African-American visits his white girlfriend's parents for the weekend, where his simmering uneasiness about their reception eventually reaches a boiling point.",
-            duration=104,
+            title="Moana",
+            description="Moana sets sail on an adventurous journey to save her people and discover her true identity, guided by the demigod Maui.",
+            duration=107,
+            genre_id=genre_map["Animation"],
+            rating=7.5,
+            release_date=datetime(2026, 6, 12),
+            poster_url="https://image.tmdb.org/t/p/w342/4JeejGugONWpJkpnvUbLQcLmJA4.jpg",
+            trailer_key="EEz5xbzYPKI",
+        ),
+        Movie(
+            title="Spider-Man: Brand New Day",
+            description="Fighting crime full-time as Spider-Man in a world that doesn't remember him—and the pressure of seeing his old friends move on without him—sparks a change in Peter Parker he may not have the power to control. But that transformation might also be the only thing that can stop a shocking new threat to the city and those he loves.",
+            duration=130,
+            genre_id=genre_map["Action"],
+            rating=8.0,
+            release_date=datetime(2026, 7, 28),
+            poster_url="https://image.tmdb.org/t/p/w342/iPOn6DinuVyLY17YM9mKuPofV08.jpg",
+            trailer_key="P3uI5sLosKU",
+        ),
+        Movie(
+            title="Superman",
+            description="Clark Kent must decide whether to use his incredible powers for good or retreat into the shadows, as a new threat rises over Metropolis.",
+            duration=120,
+            genre_id=genre_map["Action"],
+            rating=6.9,
+            release_date=datetime(2026, 7, 3),
+            poster_url="https://image.tmdb.org/t/p/w342/zntDh5cHv9bwGTdzBRiUiXfdb9j.jpg",
+            trailer_key="MikgqM0LXr4",
+        ),
+        Movie(
+            title="Deep Water",
+            description="A group of international passengers on a flight from Los Angeles to Shanghai is forced to make an emergency landing in shark-infested waters. The terrified group is forced to work together and overcome their differences if they hope to escape their sinking plane and the frenzy of sharks drawn to the wreckage.",
+            duration=105,
             genre_id=genre_map["Horror"],
-            rating=7.7,
-            release_date=datetime(2017, 2, 24),
-            poster_url="https://image.tmdb.org/t/p/w342/1SwAV1T6V3wC2U7Tz3r6K0mPp9F.jpg",
+            rating=7.2,
+            release_date=datetime(2026, 4, 30),
+            poster_url="https://image.tmdb.org/t/p/w342/kjcuS7xaRyqRjVaVcH4t0qHshuX.jpg",
+            trailer_key="f0ptq0Lzdh8",
         ),
         Movie(
-            title="Superbad",
-            description="Two co-dependent high school seniors are forced to deal with separation anxiety after their plan to stage a booze-soaked party goes awry.",
-            duration=113,
-            genre_id=genre_map["Comedy"],
-            rating=7.6,
-            release_date=datetime(2007, 8, 17),
-            poster_url="https://image.tmdb.org/t/p/w342/8vYccWvR8kYUnMkCnMq7PsQmONH.jpg",
+            title="The Death of Robin Hood",
+            description="Grappling with his past after a life of crime and murder, Robin Hood finds himself gravely injured after a battle he thought would be his last. In the hands of a mysterious woman, he is offered a chance at salvation.",
+            duration=120,
+            genre_id=genre_map["Drama"],
+            rating=6.6,
+            release_date=datetime(2026, 6, 18),
+            poster_url="https://image.tmdb.org/t/p/w342/13MmRwmG5NmaMfU8qNrtgGXisiD.jpg",
+            trailer_key="tlSDDuWxO_0",
         ),
     ]
     db.session.add_all(movies)
     db.session.flush()
 
-    # ── Cinemas ──
+    # ── Cinemas (each shows exactly one movie) ──
     cinemas = [
         Cinema(
             name="Nyali Cinemax",
@@ -131,45 +142,49 @@ with app.app_context():
     db.session.add_all(cinemas)
     db.session.flush()
 
-    # ── Seats ──
-    screens = ["Screen 1", "Screen 2", "Screen 3"]
-    rows = "ABCDEF"
-    seats_per_row = 8
-
+    # ── Seats (40 per cinema, Screen 1) ──
+    rows = "ABCDE"
     for cinema in cinemas:
-        for screen in screens:
-            for row_letter in rows:
-                for num in range(1, seats_per_row + 1):
-                    seat = Seat(
-                        cinema_id=cinema.id,
-                        screen=screen,
-                        seat_number=f"{row_letter}{num}",
-                        row=row_letter,
-                        type="standard",
-                        status="available",
-                    )
-                    db.session.add(seat)
+        for row_letter in rows:
+            for num in range(1, 9):
+                seat = Seat(
+                    cinema_id=cinema.id,
+                    screen="Screen 1",
+                    seat_number=f"{row_letter}{num}",
+                    row=row_letter,
+                    type="standard",
+                    status="available",
+                )
+                db.session.add(seat)
     db.session.flush()
 
-    # ── Showtimes ──
+    # ── Showtimes (one movie per cinema, matinee + evening) ──
     today = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    base_times = [10, 13, 16, 19, 22]
-
-    for movie in movies:
-        for cinema in cinemas:
-            for hour in base_times:
-                start = today + timedelta(days=1) + timedelta(hours=hour)
-                end = start + timedelta(minutes=movie.duration)
-                showtime = Showtime(
+    schedule = [
+        (0, [12, 18]),  # Nyali Cinemax        -> The Odyssey
+        (1, [13, 19]),  # Prestige Cinemas     -> Moana
+        (2, [12, 18]),  # Anga Sky Cinemas     -> Spider-Man
+        (3, [14, 20]),  # Century Cinemax      -> Superman
+        (4, [11, 17]),  # Silverbird Cinemas   -> Deep Water
+        (5, [13, 19]),  # Fox Cineplex         -> The Death of Robin Hood
+    ]
+    for cinema_idx, hours in schedule:
+        movie = movies[cinema_idx]
+        cinema = cinemas[cinema_idx]
+        for hour in hours:
+            start = today + timedelta(days=1) + timedelta(hours=hour)
+            end = start + timedelta(minutes=(movie.duration or 120))
+            db.session.add(
+                Showtime(
                     movie_id=movie.id,
                     cinema_id=cinema.id,
-                    screen="Screen 1" if hour < 16 else "Screen 2",
+                    screen="Screen 1",
                     start_time=start,
                     end_time=end,
                     price=1200 if hour < 16 else 1500,
-                    available_seats=48,
+                    available_seats=40,
                 )
-                db.session.add(showtime)
+            )
 
     # ── Demo User ──
     demo = User(name="Demo User", email="demo@example.com")
@@ -179,11 +194,11 @@ with app.app_context():
     db.session.commit()
 
     print("Database seeded successfully!")
-    print(f"  Genres:   {Genre.query.count()}")
-    print(f"  Movies:   {Movie.query.count()}")
-    print(f"  Cinemas:  {Cinema.query.count()}")
-    print(f"  Seats:    {Seat.query.count()}")
-    print(f"  Showtimes:{Showtime.query.count()}")
-    print(f"  Users:    {User.query.count()}")
+    print(f"  Genres:    {Genre.query.count()}")
+    print(f"  Movies:    {Movie.query.count()}")
+    print(f"  Cinemas:   {Cinema.query.count()}")
+    print(f"  Seats:     {Seat.query.count()}")
+    print(f"  Showtimes: {Showtime.query.count()}")
+    print(f"  Users:     {User.query.count()}")
     print()
     print("Demo login:  demo@example.com / password123")
