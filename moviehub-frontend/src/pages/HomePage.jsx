@@ -64,15 +64,15 @@ function Hero({ query, setQuery }) {
         <div className="flex flex-wrap gap-3">
           <Link
             to="/cinemas"
-            className="rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:opacity-90"
+            className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-r from-cyan-400 to-blue-500 px-5 py-3 text-center text-sm font-semibold text-slate-950 shadow-lg shadow-cyan-500/20 transition hover:opacity-90"
           >
             Browse cinemas
           </Link>
           <Link
             to="/cinemas"
-            className="rounded-2xl border border-white/15 px-5 py-3 text-sm font-semibold text-white transition hover:border-white/30"
+            className="inline-flex items-center justify-center rounded-2xl border border-white/15 px-5 py-3 text-center text-sm font-semibold text-white transition hover:border-white/30"
           >
-            View added cinemas
+            Add cinemas
           </Link>
         </div>
       </div>
@@ -89,21 +89,63 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
   const authHeaders = token ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } : { 'Content-Type': 'application/json' };
   const [cinemas, setCinemas] = useState([]);
   const [cinemaId, setCinemaId] = useState('');
+  const [date, setDate] = useState(() => {
+    const d = new Date();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${d.getFullYear()}-${mm}-${dd}`;
+  });
   const [showtime, setShowtime] = useState('');
   const [price, setPrice] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  function currentMovie(cinema) {
+    const now = new Date();
+    const movieMap = new Map((cinema.movies || []).map((m) => [m.id, m.title]));
+    const upcoming = (cinema.showtimes || []).filter((st) => new Date(st.start_time) > now);
+    if (upcoming.length === 0) return null;
+    const ids = new Set(upcoming.map((st) => st.movie_id));
+    const titles = [...ids].map((id) => movieMap.get(id)).filter(Boolean);
+    return titles.length ? titles[0] : null;
+  }
+
+  async function fetchTrailerKey(tmdbId) {
+    if (!tmdbId || !TMDB_API_KEY || isPlaceholderApiKey) return null;
+    try {
+      const res = await fetch(
+        `${TMDB_BASE}/movie/${tmdbId}/videos?api_key=${TMDB_API_KEY}&language=en-US`
+      );
+      if (!res.ok) return null;
+      const data = await res.json();
+      const picks = (data.results || []).filter(
+        (v) => v.site === 'YouTube' && v.type === 'Trailer'
+      );
+      const trailer = picks.find((v) => v.official) || picks[0];
+      return trailer?.key || null;
+    } catch {
+      return null;
+    }
+  }
+
   useEffect(() => {
     getCinemas().then((list) => {
       setCinemas(list);
-      if (list.length > 0) setCinemaId(String(list[0].id));
+      const firstAvailable = list.find((c) => !currentMovie(c));
+      if (firstAvailable) setCinemaId(String(firstAvailable.id));
     });
   }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
-    if (!showtime || !price || !cinemaId) return;
+    if (!showtime || !date || !price || !cinemaId) return;
+
+    const selected = cinemas.find((c) => String(c.id) === cinemaId);
+    const taken = selected ? currentMovie(selected) : null;
+    if (taken) {
+      setError(`${selected.name} is already showing ${taken}. A cinema can only show one movie.`);
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -115,6 +157,7 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
           title: movie.title,
           description: movie.overview || '',
           poster_url: movie.poster_path ? `${POSTER_BASE}${movie.poster_path}` : null,
+          trailer_key: await fetchTrailerKey(movie.id),
           release_date: movie.release_date || null,
           rating: movie.vote_average || null,
         }),
@@ -122,9 +165,9 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
       const createdMovie = await movieRes.json();
       if (!movieRes.ok) throw new Error(createdMovie?.message || 'Failed to create movie');
 
-      const now = new Date();
+      const [year, month, day] = date.split('-').map(Number);
       const [hours, minutes] = showtime.split(':');
-      const startTime = new Date(now.getFullYear(), now.getMonth(), now.getDate(), +hours, +minutes);
+      const startTime = new Date(year, month - 1, day, +hours, +minutes);
 
       const stRes = await fetch('/api/showtimes', {
         method: 'POST',
@@ -170,12 +213,37 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
               className="rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-[13px] text-white focus:border-cyan-400 focus:outline-none"
             >
               {cinemas.length === 0 && <option value="">Loading...</option>}
-              {cinemas.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
+              {cinemas.map((c) => {
+                const movie = currentMovie(c);
+                return (
+                  <option key={c.id} value={c.id} disabled={!!movie}>
+                    {c.name}
+                    {movie ? ` — showing ${movie}` : ' (available)'}
+                  </option>
+                );
+              })}
             </select>
+            {cinemas.every((c) => currentMovie(c)) && (
+              <span className="text-[11.5px] text-amber-400">
+                All cinemas already have a movie. Delete a showtime on the cinemas page to free one up.
+              </span>
+            )}
+          </label>
+
+          <label className="flex flex-col gap-1">
+            <span className="text-[11.5px] font-medium text-neutral-500">Date</span>
+            <input
+              type="date"
+              value={date}
+              min={(() => {
+                const d = new Date();
+                const mm = String(d.getMonth() + 1).padStart(2, '0');
+                const dd = String(d.getDate()).padStart(2, '0');
+                return `${d.getFullYear()}-${mm}-${dd}`;
+              })()}
+              onChange={(e) => setDate(e.target.value)}
+              className="rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-[13px] text-white focus:border-cyan-400 focus:outline-none"
+            />
           </label>
 
           <label className="flex flex-col gap-1">
@@ -189,7 +257,7 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[11.5px] font-medium text-neutral-500">Ticket price ($)</span>
+            <span className="text-[11.5px] font-medium text-neutral-500">Ticket price (KSh)</span>
             <input
               type="number"
               min="0"
@@ -251,6 +319,12 @@ function MovieCard({ movie, onOpenAddCinema }) {
           <p className="text-[11px] text-neutral-500">{year}</p>
         </div>
 
+        {movie.overview && (
+          <p className="line-clamp-3 text-[11px] leading-relaxed text-neutral-400">
+            {movie.overview}
+          </p>
+        )}
+
         {isAdmin && (
           <button
             onClick={() => onOpenAddCinema(movie)}
@@ -275,7 +349,7 @@ function NowShowing({ movies, loading, error, query }) {
   }
 
   return (
-    <section>
+    <section id="browse">
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-[18px] font-semibold text-white">To Be Premiered</h2>
       </div>

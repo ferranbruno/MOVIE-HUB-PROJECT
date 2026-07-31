@@ -41,6 +41,7 @@ def create_movie():
         title=data["title"],
         description=data.get("description", ""),
         poster_url=data.get("poster_url"),
+        trailer_key=data.get("trailer_key"),
         release_date=release_date,
         rating=data.get("rating"),
         duration=data.get("duration"),
@@ -83,6 +84,8 @@ def update_movie(movie_id):
         movie.duration = data["duration"]
     if "poster_url" in data:
         movie.poster_url = data["poster_url"]
+    if "trailer_key" in data:
+        movie.trailer_key = data["trailer_key"]
     if "release_date" in data:
         try:
             movie.release_date = date.fromisoformat(data["release_date"])

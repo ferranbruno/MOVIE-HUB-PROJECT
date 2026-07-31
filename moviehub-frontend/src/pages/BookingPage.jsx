@@ -272,11 +272,11 @@ export default function BookingPage() {
                 </div>
                 <div className="flex justify-between text-neutral-500">
                   <span>Price per seat</span>
-                  <span className="font-semibold text-neutral-200">${price.toFixed(2)}</span>
+                  <span className="font-semibold text-neutral-200">KSh {price.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between border-t border-neutral-800 pt-2 text-[14px]">
                   <span className="font-medium text-neutral-300">Total</span>
-                  <span className="font-semibold text-white">${total.toFixed(2)}</span>
+                  <span className="font-semibold text-white">KSh {total.toFixed(2)}</span>
                 </div>
               </div>
               <button

@@ -15,6 +15,7 @@ class Movie(db.Model):
     rating = db.Column(db.Numeric(3, 1), nullable=True)
     release_date = db.Column(db.Date, nullable=True)
     poster_url = db.Column(db.String(500), nullable=True)
+    trailer_key = db.Column(db.String(50), nullable=True)
     created_at = db.Column(
         db.DateTime, nullable=False, default=lambda: datetime.now(timezone.utc)
     )

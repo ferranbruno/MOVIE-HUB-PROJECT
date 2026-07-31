@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required
-from src.models import Showtime, BookingSeat, Booking, Seat, Cinema
+from src.models import Showtime, BookingSeat, Booking, Seat, Cinema, Movie
 from src.schemas import ShowtimeSchema
 from src.extensions import db
 from src.decorators import admin_required
@@ -53,6 +53,22 @@ def create_showtime():
         return jsonify({"message": "Invalid start_time format"}), 400
 
     ensure_cinema_seats(cinema_id, screen=data.get("screen", "Screen 1"))
+
+    from datetime import datetime as _dt, timezone as _tz
+    now = _dt.now(_tz.utc).replace(tzinfo=None)
+    existing_movie_ids = {
+        mid
+        for (mid,) in db.session.query(Showtime.movie_id)
+        .filter(Showtime.cinema_id == cinema_id, Showtime.start_time > now)
+        .distinct()
+        .all()
+    }
+    if existing_movie_ids and movie_id not in existing_movie_ids:
+        current_movie = Movie.query.get(next(iter(existing_movie_ids)))
+        name = current_movie.title if current_movie else "another movie"
+        return jsonify({
+            "message": f"This cinema is already showing {name}. A cinema can only show one movie — delete its current showtime first."
+        }), 400
 
     showtime = Showtime(
         movie_id=movie_id,

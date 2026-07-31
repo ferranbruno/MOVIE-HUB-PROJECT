@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Clapperboard, MapPin, Clock, Star, Loader2, Trash2 } from 'lucide-react';
+import { Clapperboard, MapPin, Clock, Star, Loader2, Trash2, Play, X } from 'lucide-react';
 import useAuth from '../hooks/useAuth';
 
 const POSTER_BASE = 'https://image.tmdb.org/t/p/w342';
@@ -10,6 +10,10 @@ function getPosterUrl(path) {
   return path.startsWith('http') ? path : `${POSTER_BASE}${path}`;
 }
 
+function formatPrice(price) {
+  return price ? `KSh ${parseFloat(price).toFixed(2)}` : '—';
+}
+
 function CinemasPage() {
   const { user } = useAuth();
   const isAdmin = user?.role === 'admin';
@@ -17,6 +21,8 @@ function CinemasPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [deletingId, setDeletingId] = useState(null);
+  const [previewKey, setPreviewKey] = useState(null);
+  const [previewTitle, setPreviewTitle] = useState('');
 
   useEffect(() => {
     async function load() {
@@ -47,10 +53,12 @@ function CinemasPage() {
       });
       if (!res.ok) throw new Error('Failed to delete');
       setMovies((prev) =>
-        prev.map((m) => ({
-          ...m,
-          showtimes: (m.showtimes || []).filter((st) => st.id !== showtimeId),
-        }))
+        prev
+          .map((m) => ({
+            ...m,
+            showtimes: (m.showtimes || []).filter((st) => st.id !== showtimeId),
+          }))
+          .filter((m) => (m.showtimes || []).length > 0)
       );
     } catch (err) {
       alert(err.message);
@@ -60,20 +68,32 @@ function CinemasPage() {
   }
 
   const now = new Date();
-  const items = movies.flatMap((m) =>
-    (m.showtimes || []).filter((st) => new Date(st.start_time) > new Date(now.getTime() - 3600000)).map((st) => ({
-      id: st.id,
-      movieId: m.id,
-      title: m.title,
-      posterUrl: getPosterUrl(m.poster_url),
-      cinemaName: st.cinema?.name || '',
-      screen: st.screen || '',
-      startTime: st.start_time,
-      price: st.price ? `$${parseFloat(st.price).toFixed(2)}` : '—',
-      rating: m.rating,
-      description: m.description,
-    }))
-  );
+  const threshold = now.getTime() - 3600000;
+
+  const byCinema = new Map();
+  for (const m of movies) {
+    for (const st of m.showtimes || []) {
+      if (!st.cinema || new Date(st.start_time) <= new Date(threshold)) continue;
+      const cin = st.cinema;
+      if (!byCinema.has(cin.id)) byCinema.set(cin.id, { cinema: cin, showtimes: [] });
+      byCinema.get(cin.id).showtimes.push({
+        id: st.id,
+        movieId: m.id,
+        title: m.title,
+        description: m.description,
+        trailerKey: m.trailer_key,
+        posterUrl: getPosterUrl(m.poster_url),
+        rating: m.rating,
+        screen: st.screen || '',
+        startTime: st.start_time,
+        price: formatPrice(st.price),
+      });
+    }
+  }
+
+  const cinemas = Array.from(byCinema.values())
+    .map((g) => ({ ...g, showtimes: g.showtimes.sort((a, b) => new Date(a.startTime) - new Date(b.startTime)) }))
+    .sort((a, b) => a.cinema.name.localeCompare(b.cinema.name));
 
   return (
     <div className="relative min-h-screen bg-slate-950 text-white">
@@ -120,7 +140,7 @@ function CinemasPage() {
           </div>
         )}
 
-        {!loading && !error && items.length === 0 && (
+        {!loading && !error && cinemas.length === 0 && (
           <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-10 text-center text-slate-300">
             <p className="text-lg font-semibold text-white">No showtimes available</p>
             <p className="mt-2 text-sm text-slate-400">
@@ -135,14 +155,14 @@ function CinemasPage() {
           </div>
         )}
 
-        {!loading && !error && items.length > 0 && (
+        {!loading && !error && cinemas.length > 0 && (
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-            {items.map((item) => (
-              <div key={item.id} className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
-                {item.posterUrl ? (
+            {cinemas.map(({ cinema, showtimes }) => (
+              <div key={cinema.id} className="overflow-hidden rounded-3xl border border-white/10 bg-slate-900/80 shadow-[0_0_0_1px_rgba(255,255,255,0.03)]">
+                {showtimes[0]?.posterUrl ? (
                   <img
-                    src={item.posterUrl}
-                    alt={item.title}
+                    src={showtimes[0].posterUrl}
+                    alt={cinema.name}
                     className="h-56 w-full object-cover"
                   />
                 ) : (
@@ -153,54 +173,79 @@ function CinemasPage() {
 
                 <div className="p-5">
                   <div className="mb-4 flex items-start justify-between gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-cyan-100 text-lg text-cyan-600">
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1.5 text-lg font-semibold text-white">
+                        <MapPin size={16} className="shrink-0 text-cyan-400" />
+                        <span className="truncate">{cinema.name}</span>
+                      </p>
+                      <p className="mt-1 text-[12px] text-slate-400">
+                        {[cinema.address, cinema.city].filter(Boolean).join(', ') || '—'}
+                      </p>
+                    </div>
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-cyan-100 text-lg text-cyan-600">
                       🎬
                     </div>
-                    <span className="rounded-full bg-cyan-500 px-3 py-1 text-[11px] font-semibold text-slate-950">
-                      {item.price}
-                    </span>
-                  </div>
-
-                  <div className="mb-4">
-                    <p className="text-xl font-semibold text-white truncate">{item.title}</p>
-                    <p className="mt-1 text-sm text-slate-400 truncate">{item.cinemaName}{item.screen ? ` (${item.screen})` : ''}</p>
-                  </div>
-
-                  <div className="mb-4 flex flex-wrap gap-3 text-[12px] text-slate-400">
-                    <span className="inline-flex items-center gap-1">
-                      <MapPin size={12} /> {item.cinemaName || '—'}
-                    </span>
-                    <span className="inline-flex items-center gap-1">
-                      <Clock size={12} /> {item.startTime ? new Date(item.startTime).toLocaleString() : '—'}
-                    </span>
-                  </div>
-
-                  <div className="mb-4 flex items-center justify-between gap-3 text-sm text-slate-400">
-                    <span>{item.screen || 'Standard'}</span>
-                    {item.rating && (
-                      <span className="inline-flex items-center gap-1 text-cyan-300">
-                        <Star size={14} /> {parseFloat(item.rating).toFixed(1)}
-                      </span>
-                    )}
                   </div>
 
                   <div className="flex flex-col gap-3">
-                    <Link
-                      to={`/booking/${item.id}`}
-                      className="rounded-2xl bg-cyan-500 px-4 py-3 text-center text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
-                    >
-                      Book seats
-                    </Link>
-                    {isAdmin && (
-                      <button
-                        onClick={(e) => handleDelete(item.id, e)}
-                        disabled={deletingId === item.id}
-                        className="flex items-center justify-center gap-1.5 rounded-2xl border border-red-500/30 px-4 py-2.5 text-[12px] font-medium text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"
-                      >
-                        <Trash2 size={13} />
-                        {deletingId === item.id ? 'Deleting…' : 'Delete'}
-                      </button>
-                    )}
+                    {showtimes.map((st) => (
+                      <div key={st.id} className="rounded-2xl border border-white/10 bg-slate-800/50 p-3.5">
+                        <div className="mb-3 flex items-center justify-between gap-3">
+                          <p className="min-w-0 flex-1 truncate text-[14px] font-semibold text-white">
+                            {st.title}
+                          </p>
+                          {st.rating && (
+                            <span className="flex shrink-0 items-center gap-1 text-[12px] text-cyan-300">
+                              <Star size={13} /> {parseFloat(st.rating).toFixed(1)}
+                            </span>
+                          )}
+                        </div>
+                        {st.description && (
+                          <p className="mb-3 line-clamp-3 text-[12px] leading-relaxed text-slate-400">
+                            {st.description}
+                          </p>
+                        )}
+                        <p className="mb-3 flex items-center gap-1.5 text-[12px] text-slate-400">
+                          <Clock size={12} className="shrink-0" />
+                          {new Date(st.startTime).toLocaleString()}
+                          {st.screen ? ` · ${st.screen}` : ''}
+                        </p>
+                        <div className="flex gap-2">
+                          <span className="flex items-center rounded-xl bg-cyan-500/10 px-3 py-2.5 text-[12.5px] font-semibold text-cyan-300">
+                            {st.price}
+                          </span>
+                          <Link
+                            to={`/booking/${st.id}`}
+                            className="flex-1 rounded-xl bg-cyan-500 px-3 py-2.5 text-center text-[12.5px] font-semibold text-slate-950 transition hover:bg-cyan-400"
+                          >
+                            Book seats
+                          </Link>
+                          {st.trailerKey && (
+                            <button
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setPreviewKey(st.trailerKey);
+                                setPreviewTitle(st.title);
+                              }}
+                              className="flex items-center justify-center rounded-xl border border-white/15 px-3 text-[12px] font-medium text-slate-200 transition hover:border-cyan-400/50 hover:text-cyan-300"
+                              title="Watch trailer"
+                            >
+                              <Play size={14} className="fill-current" />
+                            </button>
+                          )}
+                          {isAdmin && (
+                            <button
+                              onClick={(e) => handleDelete(st.id, e)}
+                              disabled={deletingId === st.id}
+                              className="flex items-center justify-center rounded-xl border border-red-500/30 px-3 text-[12px] font-medium text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"
+                              title="Delete showtime"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -208,6 +253,37 @@ function CinemasPage() {
           </div>
         )}
       </main>
+
+      {previewKey && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 px-4"
+          onClick={() => setPreviewKey(null)}
+        >
+          <div
+            className="w-full max-w-3xl overflow-hidden rounded-3xl border border-white/10 bg-slate-900 p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="truncate text-[15px] font-semibold text-white">{previewTitle} — Trailer</p>
+              <button
+                onClick={() => setPreviewKey(null)}
+                className="text-slate-400 transition hover:text-white"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="aspect-video w-full overflow-hidden rounded-2xl bg-black">
+              <iframe
+                src={`https://www.youtube.com/embed/${previewKey}?autoplay=1`}
+                title="Movie trailer"
+                className="h-full w-full"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
