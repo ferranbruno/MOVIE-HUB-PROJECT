@@ -1,6 +1,7 @@
 from marshmallow import fields
 from src.extensions import ma
 from src.models import Movie
+from .fields import AwareDateTime
 
 
 class MovieSchema(ma.SQLAlchemyAutoSchema):
@@ -16,8 +17,8 @@ class MovieSchema(ma.SQLAlchemyAutoSchema):
     rating = fields.Decimal(as_string=True)
     release_date = fields.Date()
     poster_url = fields.String()
-    created_at = fields.DateTime(dump_only=True)
-    updated_at = fields.DateTime(dump_only=True)
+    created_at = AwareDateTime(dump_only=True)
+    updated_at = AwareDateTime(dump_only=True)
 
     genre = fields.Nested("GenreSchema", dump_only=True, exclude=("movies",))
     showtimes = fields.Nested(
