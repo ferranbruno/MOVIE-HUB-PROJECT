@@ -100,7 +100,7 @@ function CinemasPage() {
               to="/"
               className="rounded-full bg-cyan-500 px-4 py-2 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400"
             >
-              Browse TMDB movies
+              Browse movies
             </Link>
           </div>
         </div>
@@ -124,7 +124,7 @@ function CinemasPage() {
           <div className="rounded-3xl border border-white/10 bg-slate-900/80 p-10 text-center text-slate-300">
             <p className="text-lg font-semibold text-white">No showtimes available</p>
             <p className="mt-2 text-sm text-slate-400">
-              Use the homepage to search TMDB movies and add them with a cinema and showtime.
+              Use the homepage to search movies and add them with a cinema and showtime.
             </p>
             <Link
               to="/"

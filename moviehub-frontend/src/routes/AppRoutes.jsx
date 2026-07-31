@@ -1,4 +1,5 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Layout from '../components/layout/Layout';
 import HomePage from '../pages/HomePage';
 import LoginPage from '../pages/LoginPage';
 import MovieDetailPage from '../pages/MovieDetailPage';
@@ -14,19 +15,21 @@ import PrivateRoute from './PrivateRoute';
 function AppRoutes() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-        <Route path="/reset-password" element={<ResetPasswordPage />} />
-        <Route path="/signup" element={<SignupPage />} />
-        <Route path="/cinemas" element={<PrivateRoute><CinemasPage /></PrivateRoute>} />
-        <Route path="/booking/:id" element={<PrivateRoute><BookingPage /></PrivateRoute>} />
-        <Route path="/movie/:id" element={<PrivateRoute><MovieDetailPage /></PrivateRoute>} />
-        <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
-        <Route path="/bookings" element={<PrivateRoute><BookingsPage /></PrivateRoute>} />
-        <Route path="*" element={<HomePage />} />
-      </Routes>
+      <Layout>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/signup" element={<SignupPage />} />
+          <Route path="/cinemas" element={<PrivateRoute><CinemasPage /></PrivateRoute>} />
+          <Route path="/booking/:id" element={<PrivateRoute><BookingPage /></PrivateRoute>} />
+          <Route path="/movie/:id" element={<PrivateRoute><MovieDetailPage /></PrivateRoute>} />
+          <Route path="/profile" element={<PrivateRoute><ProfilePage /></PrivateRoute>} />
+          <Route path="/bookings" element={<PrivateRoute><BookingsPage /></PrivateRoute>} />
+          <Route path="*" element={<HomePage />} />
+        </Routes>
+      </Layout>
     </BrowserRouter>
   );
 }

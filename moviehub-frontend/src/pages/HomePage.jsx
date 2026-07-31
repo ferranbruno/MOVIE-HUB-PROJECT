@@ -1,29 +1,20 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  Search,
-  LogIn,
-  UserPlus,
-  Building2,
   Ticket,
-  ChevronLeft,
   Star,
   Plus,
   X,
   MapPin,
   Loader2,
   Flame,
-  User,
 } from 'lucide-react';
 import Header from '../components/common/header/Header';
 import Footer from '../components/common/Footer/Footer';
 import useAuth from '../hooks/useAuth';
 
 /* ---------------------------------------------------------
-   Data source: TMDB "now playing"
-   Setup: create a free key at themoviedb.org → Settings → API,
-   then add VITE_TMDB_API_KEY=your_key to your .env
-   Fallback sample movies are shown when TMDB is unavailable.
+   Data source: movie API
 --------------------------------------------------------- */
 const TMDB_API_KEY = import.meta.env?.VITE_TMDB_API_KEY;
 const isPlaceholderApiKey = TMDB_API_KEY === 'YOUR_TMDB_API_KEY';
@@ -46,94 +37,6 @@ async function getCinemas() {
 
 
 /* ---------------------------------------------------------
-   Sidebar — same collapsing pattern as before, restyled with
-   a cyan/blue accent to match the original homepage theme
---------------------------------------------------------- */
-function HomeSidebar({ collapsed, setCollapsed }) {
-  const { isAuthenticated } = useAuth();
-
-  const navItems = isAuthenticated
-    ? [
-        { icon: User, label: 'Profile', to: '/profile' },
-        { icon: Building2, label: 'Cinemas', to: '/cinemas' },
-      ]
-    : [
-        { icon: LogIn, label: 'Sign in', to: '/login' },
-        { icon: UserPlus, label: 'Sign up', to: '/signup' },
-        { icon: Building2, label: 'Cinemas', to: '/cinemas' },
-      ];
-
-  return (
-    <aside
-      className={`group fixed left-0 top-16 bottom-0 hidden flex-col border-r border-white/10 bg-neutral-950 text-neutral-200 transition-all duration-300 lg:flex ${
-        collapsed ? 'w-16' : 'w-60'
-      }`}
-    >
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className={`absolute -right-3 top-4 z-10 flex h-6 w-6 items-center justify-center rounded-full border border-white/10 bg-neutral-950 text-neutral-200 shadow-sm transition-opacity duration-150 ${
-          collapsed ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
-        }`}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
-      >
-        <ChevronLeft
-          size={13}
-          className={`transition-transform duration-300 ${collapsed ? 'rotate-180' : ''}`}
-        />
-      </button>
-
-      <div className="flex items-center gap-2.5 px-3 py-3.5">
-        <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-cyan-400 to-blue-600">
-          <Flame size={14} className="text-white" />
-        </div>
-        {!collapsed && (
-          <div className="flex flex-col overflow-hidden whitespace-nowrap">
-            <span className="text-[13px] font-semibold text-white">MovieHub</span>
-            <span className="text-[11px] text-neutral-500">Your cinema guide</span>
-          </div>
-        )}
-      </div>
-
-      <div
-        className={`mx-3 mb-2.5 flex items-center gap-2 rounded-md bg-neutral-900 px-2 py-1.5 text-neutral-500 ${
-          collapsed ? 'justify-center' : ''
-        }`}
-      >
-        <Search size={14} className="flex-shrink-0" />
-        {!collapsed && (
-          <>
-            <span className="flex-1 text-[12.5px]">Jump to</span>
-            <span className="rounded border border-neutral-800 bg-neutral-950 px-1 text-[10.5px] text-neutral-500">
-              ⌘K
-            </span>
-          </>
-        )}
-      </div>
-
-      <nav className="flex flex-col gap-0.5 px-2">
-        {navItems.map(({ label, icon: Icon, to }) => (
-          <Link
-            key={label}
-            to={to}
-            className={`group/item relative flex items-center gap-2.5 rounded-md px-2 py-1.5 text-[13px] text-neutral-400 transition hover:bg-neutral-900 hover:text-white ${
-              collapsed ? 'justify-center px-2' : ''
-            }`}
-          >
-            <Icon size={16} className="flex-shrink-0" />
-            {!collapsed && <span className="flex-1 truncate">{label}</span>}
-            {collapsed && (
-              <span className="pointer-events-none absolute left-full ml-2.5 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-[12px] text-white opacity-0 transition-opacity duration-100 group-hover/item:opacity-100">
-                {label}
-              </span>
-            )}
-          </Link>
-        ))}
-      </nav>
-    </aside>
-  );
-}
-
-/* ---------------------------------------------------------
    Hero
 --------------------------------------------------------- */
 function Hero({ query, setQuery }) {
@@ -146,7 +49,7 @@ function Hero({ query, setQuery }) {
         Discover unforgettable movies and book your seat in seconds.
       </h1>
       <p className="mt-4 max-w-xl text-base text-slate-300">
-        Browse the latest showtimes from TMDB, explore cinemas, and reserve your favorite seat with a smooth booking experience.
+        Browse the latest showtimes, explore cinemas, and reserve your favorite seat with a smooth booking experience.
       </p>
       <div className="mt-8 grid gap-4 sm:grid-cols-[1.25fr_auto]">
         <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-xl shadow-black/20">
@@ -154,7 +57,7 @@ function Hero({ query, setQuery }) {
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search TMDB movies..."
+            placeholder="Search movies..."
             className="w-full rounded-2xl border border-white/10 bg-slate-950/80 px-4 py-3 text-white placeholder:text-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-400/20"
           />
         </div>
@@ -375,7 +278,6 @@ function NowShowing({ movies, loading, error, query }) {
     <section>
       <div className="mb-4 flex items-center justify-between">
         <h2 className="text-[18px] font-semibold text-white">To Be Premiered</h2>
-        <span className="text-[12px] text-neutral-500">via TMDB</span>
       </div>
 
       {loading && (
@@ -395,7 +297,7 @@ function NowShowing({ movies, loading, error, query }) {
         <div className="rounded-md border border-slate-700 bg-slate-900 px-4 py-6 text-[13px] text-slate-400">
           {query
             ? `No movies found for "${query}". Try a different search.`
-            : 'No TMDB movies available right now.'}
+            : 'No movies available right now.'}
         </div>
       )}
 
@@ -484,7 +386,6 @@ function Trending() {
    HomePage
 --------------------------------------------------------- */
 function HomePage() {
-  const [collapsed, setCollapsed] = useState(false);
   const [movies, setMovies] = useState([]);
   const [searchResults, setSearchResults] = useState(null);
   const [query, setQuery] = useState('');
@@ -498,9 +399,7 @@ function HomePage() {
       setLoading(true);
 
       if (!TMDB_API_KEY || isPlaceholderApiKey) {
-        setError(
-          'Missing or invalid TMDB API key. Update moviehub-frontend/.env with a real VITE_TMDB_API_KEY.'
-        );
+        setError('Movie API key not configured.');
         setMovies([]);
         setLoading(false);
         return;
@@ -513,13 +412,13 @@ function HomePage() {
         const data = await res.json();
 
         if (!res.ok) {
-          throw new Error(data.status_message || `TMDB request failed (${res.status})`);
+          throw new Error(data.status_message || `Failed to load movies (${res.status})`);
         }
 
         setMovies(data.results ?? []);
         setError(null);
       } catch (err) {
-        setError(`TMDB request failed. ${err.message}`);
+        setError(`Could not load movies. ${err.message}`);
         setMovies([]);
       } finally {
         setLoading(false);
@@ -538,9 +437,7 @@ function HomePage() {
     const controller = new AbortController();
     const timer = setTimeout(async () => {
       if (!TMDB_API_KEY || isPlaceholderApiKey) {
-        setError(
-          'Missing or invalid TMDB API key. Update moviehub-frontend/.env with a real VITE_TMDB_API_KEY.'
-        );
+        setError('Movie search is not available.');
         setSearchResults([]);
         setLoading(false);
         return;
@@ -583,12 +480,7 @@ function HomePage() {
     <div className="page-shell">
       <Header />
       <main className="relative min-h-screen bg-neutral-950 text-white">
-        <HomeSidebar collapsed={collapsed} setCollapsed={setCollapsed} />
-        <div
-          className={`space-y-10 px-4 pb-16 pt-8 sm:px-6 lg:px-8 ${
-            collapsed ? 'lg:pl-16' : 'lg:pl-60'
-          }`}
-        >
+        <div className="space-y-10 px-4 pb-16 pt-8 sm:px-6 lg:px-8">
           <Hero query={query} setQuery={setQuery} />
           <NowShowing
             movies={displayMovies}
