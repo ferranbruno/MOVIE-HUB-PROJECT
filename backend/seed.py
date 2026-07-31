@@ -86,18 +86,46 @@ with app.app_context():
     # ── Cinemas ──
     cinemas = [
         Cinema(
-            name="Cineplex Downtown",
-            address="123 Main St",
-            city="New York",
-            state="NY",
-            phone="212-555-0100",
+            name="Nyali Cinemax",
+            address="Nyali Road",
+            city="Mombasa",
+            state="Mombasa",
+            phone="+254 41 000 0000",
         ),
         Cinema(
-            name="Cineplex Uptown",
-            address="456 Broadway",
-            city="New York",
-            state="NY",
-            phone="212-555-0200",
+            name="Prestige Cinemas",
+            address="Prestige Plaza, Ngong Road",
+            city="Nairobi",
+            state="Nairobi",
+            phone="+254 20 000 0000",
+        ),
+        Cinema(
+            name="Anga Sky Cinemas",
+            address="Sky City Mall, Langata Road",
+            city="Nairobi",
+            state="Nairobi",
+            phone="+254 20 000 0000",
+        ),
+        Cinema(
+            name="Century Cinemax",
+            address="The Junction Mall, Ngong Road",
+            city="Nairobi",
+            state="Nairobi",
+            phone="+254 20 000 0000",
+        ),
+        Cinema(
+            name="Silverbird Cinemas",
+            address="Galleria Mall, Langata Road",
+            city="Nairobi",
+            state="Nairobi",
+            phone="+254 20 000 0000",
+        ),
+        Cinema(
+            name="Fox Cineplex",
+            address="Carnival Center, Mombasa Road",
+            city="Nairobi",
+            state="Nairobi",
+            phone="+254 20 000 0000",
         ),
     ]
     db.session.add_all(cinemas)
@@ -138,7 +166,7 @@ with app.app_context():
                     screen="Screen 1" if hour < 16 else "Screen 2",
                     start_time=start,
                     end_time=end,
-                    price=9.99 if hour < 16 else 12.99,
+                    price=1200 if hour < 16 else 1500,
                     available_seats=48,
                 )
                 db.session.add(showtime)

@@ -69,7 +69,7 @@ function CinemasPage() {
       cinemaName: st.cinema?.name || '',
       screen: st.screen || '',
       startTime: st.start_time,
-      price: st.price ? `$${parseFloat(st.price).toFixed(2)}` : '—',
+      price: st.price ? `KSh ${parseFloat(st.price).toFixed(2)}` : '—',
       rating: m.rating,
       description: m.description,
     }))

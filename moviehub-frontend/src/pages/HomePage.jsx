@@ -189,7 +189,7 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
           </label>
 
           <label className="flex flex-col gap-1">
-            <span className="text-[11.5px] font-medium text-neutral-500">Ticket price ($)</span>
+            <span className="text-[11.5px] font-medium text-neutral-500">Ticket price (KSh)</span>
             <input
               type="number"
               min="0"
