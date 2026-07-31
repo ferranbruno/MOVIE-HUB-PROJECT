@@ -17,6 +17,7 @@ class MovieSchema(ma.SQLAlchemyAutoSchema):
     rating = fields.Decimal(as_string=True)
     release_date = fields.Date()
     poster_url = fields.String()
+    trailer_key = fields.String()
     created_at = AwareDateTime(dump_only=True)
     updated_at = AwareDateTime(dump_only=True)
 

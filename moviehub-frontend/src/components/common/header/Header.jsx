@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 function NextShowtime() {
   const [next, setNext] = useState(null);
@@ -65,6 +65,23 @@ function Clock() {
 }
 
 function Header() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  function scrollToBrowse() {
+    document.getElementById('browse')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function goBrowse(e) {
+    e.preventDefault();
+    if (location.pathname !== '/') {
+      navigate('/');
+      setTimeout(scrollToBrowse, 150);
+    } else {
+      scrollToBrowse();
+    }
+  }
+
   return (
     <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/80 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
@@ -75,7 +92,7 @@ function Header() {
           <span>MovieHub</span>
         </Link>
         <nav className="hidden items-center gap-6 text-sm text-slate-300 md:flex">
-          <a href="#browse" className="transition hover:text-white">Browse movies</a>
+          <button onClick={goBrowse} className="transition hover:text-white">Browse movies</button>
           <Link to="/cinemas" className="transition hover:text-white">Now showing</Link>
           <NextShowtime />
           <Clock />
