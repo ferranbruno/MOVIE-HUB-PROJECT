@@ -1,6 +1,7 @@
 from marshmallow import fields
 from src.extensions import ma
 from src.models import User
+from .fields import AwareDateTime
 
 
 class UserSchema(ma.SQLAlchemyAutoSchema):
@@ -25,8 +26,8 @@ class UserSchema(ma.SQLAlchemyAutoSchema):
         except (json.JSONDecodeError, TypeError):
             return []
 
-    created_at = fields.DateTime(dump_only=True)
-    updated_at = fields.DateTime(dump_only=True)
+    created_at = AwareDateTime(dump_only=True)
+    updated_at = AwareDateTime(dump_only=True)
     bookings = fields.Nested(
         "BookingSchema", many=True, dump_only=True, exclude=("user",)
     )
@@ -40,8 +41,8 @@ class UserSchema(ma.SQLAlchemyAutoSchema):
 class PasswordResetTokenSchema(ma.Schema):
     id = fields.Integer(dump_only=True)
     token = fields.String(dump_only=True)
-    expires_at = fields.DateTime(dump_only=True)
-    created_at = fields.DateTime(dump_only=True)
+    expires_at = AwareDateTime(dump_only=True)
+    created_at = AwareDateTime(dump_only=True)
 
 
 class UserRegisterSchema(ma.Schema):

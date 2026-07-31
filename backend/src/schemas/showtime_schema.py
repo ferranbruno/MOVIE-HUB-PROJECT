@@ -1,6 +1,7 @@
 from marshmallow import fields
 from src.extensions import ma
 from src.models import Showtime
+from .fields import AwareDateTime
 
 
 class ShowtimeSchema(ma.SQLAlchemyAutoSchema):
@@ -12,12 +13,12 @@ class ShowtimeSchema(ma.SQLAlchemyAutoSchema):
     movie_id = fields.Integer(required=True)
     cinema_id = fields.Integer(required=True)
     screen = fields.String()
-    start_time = fields.DateTime(required=True)
-    end_time = fields.DateTime()
+    start_time = AwareDateTime(required=True)
+    end_time = AwareDateTime()
     price = fields.Decimal(as_string=True)
     available_seats = fields.Integer()
-    created_at = fields.DateTime(dump_only=True)
-    updated_at = fields.DateTime(dump_only=True)
+    created_at = AwareDateTime(dump_only=True)
+    updated_at = AwareDateTime(dump_only=True)
 
     movie = fields.Nested(
         "MovieSchema",

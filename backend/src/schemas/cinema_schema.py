@@ -1,6 +1,7 @@
 from marshmallow import fields
 from src.extensions import ma
 from src.models import Cinema
+from .fields import AwareDateTime
 
 
 class CinemaSchema(ma.SQLAlchemyAutoSchema):
@@ -14,8 +15,8 @@ class CinemaSchema(ma.SQLAlchemyAutoSchema):
     city = fields.String()
     state = fields.String()
     phone = fields.String()
-    created_at = fields.DateTime(dump_only=True)
-    updated_at = fields.DateTime(dump_only=True)
+    created_at = AwareDateTime(dump_only=True)
+    updated_at = AwareDateTime(dump_only=True)
 
     seats = fields.Nested(
         "SeatSchema", many=True, dump_only=True, exclude=("cinema",)

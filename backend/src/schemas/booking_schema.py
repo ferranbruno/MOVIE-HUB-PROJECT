@@ -1,6 +1,7 @@
 from marshmallow import fields, post_dump
 from src.extensions import ma
 from src.models import Booking
+from .fields import AwareDateTime
 
 
 class BookingSchema(ma.SQLAlchemyAutoSchema):
@@ -11,11 +12,11 @@ class BookingSchema(ma.SQLAlchemyAutoSchema):
     id = fields.Integer(dump_only=True)
     user_id = fields.Integer(required=True)
     showtime_id = fields.Integer(required=True)
-    booking_date = fields.DateTime(dump_only=True)
+    booking_date = AwareDateTime(dump_only=True)
     status = fields.String()
     total_price = fields.Decimal(as_string=True)
-    created_at = fields.DateTime(dump_only=True)
-    updated_at = fields.DateTime(dump_only=True)
+    created_at = AwareDateTime(dump_only=True)
+    updated_at = AwareDateTime(dump_only=True)
 
     user = fields.Nested(
         "UserSchema",
