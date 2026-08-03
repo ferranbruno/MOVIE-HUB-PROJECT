@@ -1,6 +1,6 @@
 {
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "https://movie-hub-project.onrender.com/api/$1" },
+    { "source": "/api/(.*)", "destination": "https://movie-hub-project-2.onrender.com/api/$1" },
     { "source": "/(.*)", "destination": "/index.html" }
   ]
 }
