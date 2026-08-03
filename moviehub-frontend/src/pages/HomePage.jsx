@@ -93,6 +93,9 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
   const [cinemas, setCinemas] = useState([]);
   const [cinemaId, setCinemaId] = useState('');
   const [deletingId, setDeletingId] = useState(null);
+  const [cinemasLoading, setCinemasLoading] = useState(true);
+  const [newCinemaName, setNewCinemaName] = useState('');
+  const [creatingCinema, setCreatingCinema] = useState(false);
   const [date, setDate] = useState(() => {
     const d = new Date();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -135,6 +138,7 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
   useEffect(() => {
     getCinemas().then((list) => {
       setCinemas(list);
+      setCinemasLoading(false);
       const firstAvailable = list.find((c) => !currentMovie(c));
       if (firstAvailable) setCinemaId(String(firstAvailable.id));
     });
@@ -162,6 +166,31 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
       alert(err.message);
     } finally {
       setDeletingId(null);
+    }
+  }
+
+  async function handleCreateCinema(e) {
+    e.preventDefault();
+    const name = newCinemaName.trim();
+    if (!name) return;
+    setCreatingCinema(true);
+    try {
+      const res = await fetch('/api/cinemas', {
+        method: 'POST',
+        headers: authHeaders,
+        body: JSON.stringify({ name }),
+      });
+      const created = await res.json();
+      if (!res.ok) throw new Error(created?.message || 'Failed to create cinema');
+      const updated = [...cinemas, created];
+      setCinemas(updated);
+      cinemasCache = updated;
+      setCinemaId(String(created.id));
+      setNewCinemaName('');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setCreatingCinema(false);
     }
   }
 
@@ -241,7 +270,10 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
               onChange={(e) => setCinemaId(e.target.value)}
               className="rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-[13px] text-white focus:border-cyan-400 focus:outline-none"
             >
-              {cinemas.length === 0 && <option value="">Loading...</option>}
+              {cinemasLoading && <option value="">Loading...</option>}
+              {!cinemasLoading && cinemas.length === 0 && (
+                <option value="">No cinemas yet — create one below</option>
+              )}
               {cinemas.map((c) => {
                 const movie = currentMovie(c);
                 return (
@@ -258,6 +290,30 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
               </span>
             )}
           </label>
+
+          {isAdmin && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11.5px] font-medium text-neutral-500">
+                {cinemas.length > 0 ? 'New cinema' : 'Create your first cinema'}
+              </span>
+              <div className="flex gap-2">
+                <input
+                  type="text"
+                  value={newCinemaName}
+                  onChange={(e) => setNewCinemaName(e.target.value)}
+                  placeholder="Cinema name"
+                  className="flex-1 rounded-md border border-white/10 bg-neutral-950 px-3 py-2 text-[13px] text-white placeholder:text-neutral-600 focus:border-cyan-400 focus:outline-none"
+                />
+                <button
+                  onClick={handleCreateCinema}
+                  disabled={creatingCinema || !newCinemaName.trim()}
+                  className="rounded-md bg-neutral-800 px-3 py-2 text-[12.5px] font-medium text-white transition hover:bg-neutral-700 disabled:opacity-50"
+                >
+                  {creatingCinema ? 'Creating...' : 'Create'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {isAdmin && cinemas.length > 0 && (
             <div className="flex flex-col gap-1.5">
