@@ -252,7 +252,7 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
                 );
               })}
             </select>
-            {cinemas.every((c) => currentMovie(c)) && (
+            {cinemas.length > 0 && cinemas.every((c) => currentMovie(c)) && (
               <span className="text-[11.5px] text-amber-400">
                 All cinemas already have a movie. Delete a showtime on the cinemas page to free one up.
               </span>
