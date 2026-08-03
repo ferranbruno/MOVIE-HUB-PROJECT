@@ -1,1 +1,1 @@
-web: python bootstrap.py && python seed.py && gunicorn run:app --bind 0.0.0.0:${PORT:-4000} --timeout 120 --workers 2
+web: python bootstrap.py && gunicorn run:app --bind 0.0.0.0:${PORT:-4000} --timeout 120 --workers 2
