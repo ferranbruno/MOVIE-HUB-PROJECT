@@ -8,6 +8,7 @@ import {
   MapPin,
   Loader2,
   Flame,
+  Trash2,
 } from 'lucide-react';
 import Header from '../components/common/header/Header';
 import Footer from '../components/common/Footer/Footer';
@@ -85,10 +86,13 @@ function Hero({ query, setQuery }) {
 --------------------------------------------------------- */
 function AddCinemaModal({ movie, onClose, onAdd }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const token = localStorage.getItem('token');
   const authHeaders = token ? { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` } : { 'Content-Type': 'application/json' };
   const [cinemas, setCinemas] = useState([]);
   const [cinemaId, setCinemaId] = useState('');
+  const [deletingId, setDeletingId] = useState(null);
   const [date, setDate] = useState(() => {
     const d = new Date();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -135,6 +139,31 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
       if (firstAvailable) setCinemaId(String(firstAvailable.id));
     });
   }, []);
+
+  async function handleDeleteCinema(cinema, e) {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!cinema) return;
+    const hasShowtimes = (cinema.showtimes || []).some((st) => new Date(st.start_time) > new Date());
+    if (hasShowtimes && !confirm(`Delete ${cinema.name}? This also deletes its showtimes and bookings.`)) return;
+    if (!hasShowtimes && !confirm(`Delete ${cinema.name}?`)) return;
+    setDeletingId(cinema.id);
+    try {
+      const res = await fetch(`/api/cinemas/${cinema.id}`, {
+        method: 'DELETE',
+        headers: authHeaders,
+      });
+      if (!res.ok) throw new Error((await res.json())?.message || 'Failed to delete cinema');
+      const remaining = cinemas.filter((c) => c.id !== cinema.id);
+      setCinemas(remaining);
+      cinemasCache = remaining;
+      if (String(cinemaId) === String(cinema.id)) setCinemaId('');
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  }
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -229,6 +258,32 @@ function AddCinemaModal({ movie, onClose, onAdd }) {
               </span>
             )}
           </label>
+
+          {isAdmin && cinemas.length > 0 && (
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[11.5px] font-medium text-neutral-500">Manage cinemas</span>
+              {cinemas.map((c) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between gap-2 rounded-md border border-white/10 bg-neutral-950 px-3 py-2"
+                >
+                  <span className="truncate text-[12.5px] text-white">
+                    {c.name}
+                    {currentMovie(c) ? ` — showing ${currentMovie(c)}` : ''}
+                  </span>
+                  <button
+                    onClick={(e) => handleDeleteCinema(c, e)}
+                    disabled={deletingId === c.id}
+                    className="flex shrink-0 items-center gap-1 rounded border border-red-500/30 px-2 py-1 text-[11px] font-medium text-red-300 transition hover:bg-red-500/10 disabled:opacity-50"
+                    title="Delete cinema"
+                  >
+                    <Trash2 size={12} />
+                    {deletingId === c.id ? 'Deleting...' : 'Delete'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
 
           <label className="flex flex-col gap-1">
             <span className="text-[11.5px] font-medium text-neutral-500">Date</span>
